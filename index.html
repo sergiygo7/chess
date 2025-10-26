@@ -80,10 +80,239 @@
         .mini { font-size:.65rem; padding:3px 8px; }
         .w50 { width:50%; }
         .table-wrapper { overflow-x:auto; }
+
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle { display:none; position:fixed; top:16px; left:16px; z-index:200; background:var(--sidebar-bg); color:#fff; border:none; padding:8px 12px; border-radius:var(--radius); cursor:pointer; }
+        .mobile-menu-toggle:hover { background:#3a4752; }
+        .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:150; }
+
+        /* Responsive Design */
+
+        /* Mobile devices (phones) - up to 767px */
+        @media (max-width: 767px) {
+            :root { font-size: 14px; }
+
+            body { flex-direction:column; }
+
+            .mobile-menu-toggle { display:block; }
+
+            .sidebar {
+                position:fixed;
+                top:0; left:0;
+                width:280px;
+                height:100vh;
+                z-index:160;
+                transform:translateX(-100%);
+                transition:transform 0.3s ease;
+                padding-top:60px;
+            }
+            .sidebar.mobile-open { transform:translateX(0); }
+            .sidebar-overlay.show { display:block; }
+
+            .main {
+                padding:60px 16px 24px;
+                margin-left:0;
+                min-height:calc(100vh - 60px);
+            }
+
+            .main h2 { font-size:1.3rem; margin-bottom:12px; }
+
+            .actions {
+                flex-direction:column;
+                gap:8px;
+                margin-bottom:16px;
+            }
+            .actions button {
+                width:100%;
+                justify-content:center;
+                padding:12px 16px;
+            }
+
+            /* Make manual pairing form stack vertically on mobile */
+            .manual-pairing-form {
+                flex-direction:column !important;
+                max-width:100% !important;
+                gap:12px !important;
+            }
+            .manual-pairing-form > div {
+                flex:1 1 auto !important;
+                width:100% !important;
+            }
+            .manual-pairing-form button {
+                width:100% !important;
+                margin-top:8px;
+            }
+
+            /* Algorithm settings responsive */
+            .algorithm-settings {
+                flex-direction:column !important;
+                align-items:flex-start !important;
+                gap:12px !important;
+            }
+            .algorithm-settings > * {
+                width:100%;
+            }
+
+            /* Manual pair items responsive - more compact for mobile */
+            .manual-pair-item {
+                flex-direction:row !important;
+                align-items:center !important;
+                gap:6px !important;
+                font-size:0.75rem !important;
+                min-height:auto !important;
+            }
+            .manual-pair-info {
+                flex-direction:row !important;
+                align-items:center !important;
+                gap:4px !important;
+                flex:1 !important;
+                overflow:hidden;
+            }
+            .manual-pair-info > div:first-child {
+                flex:0 0 60px !important;
+                font-size:0.7rem !important;
+                font-weight:600 !important;
+            }
+            .manual-pair-info > div:nth-child(2),
+            .manual-pair-info > div:nth-child(4) {
+                flex:1 1 auto !important;
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
+                font-size:0.7rem !important;
+            }
+            .manual-pair-info > div:nth-child(3) {
+                flex:0 0 auto !important;
+                font-size:0.65rem !important;
+                margin:0 2px !important;
+            }
+            .manual-pair-controls {
+                flex:0 0 auto !important;
+                gap:4px !important;
+            }
+            .manual-pair-controls .tag {
+                font-size:0.55rem !important;
+                padding:1px 4px !important;
+            }
+            .manual-pair-controls .mini {
+                font-size:0.6rem !important;
+                padding:2px 6px !important;
+            }
+
+            /* Make manual pair containers more compact on mobile */
+            .manual-pair-container {
+                padding:4px 6px !important;
+                margin-bottom:4px !important;
+            }
+
+            /* Tables responsive */
+            table { font-size:.7rem; }
+            th,td { padding:6px 4px; }
+
+            /* Hide less important columns on mobile */
+            .mobile-hide { display:none; }
+
+            /* Modal adjustments */
+            .modal-backdrop { padding:20px 16px; align-items:center; }
+            .modal { width:100%; max-width:360px; }
+            .modal .content { padding:16px; }
+            .modal .actions { flex-direction:column; gap:8px; }
+            .modal .actions button { width:100%; }
+        }
+
+        /* Tablet devices - 768px to 1024px */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            :root { font-size: 15px; }
+
+            .sidebar { width:220px; padding:16px 14px; }
+
+            .main { padding:20px 24px 32px; }
+
+            .actions { gap:8px; }
+            .actions button { font-size:.8rem; padding:10px 12px; }
+
+            /* Manual pairing form adjustments for tablet */
+            .manual-pairing-form {
+                flex-wrap:wrap !important;
+                gap:8px !important;
+            }
+            .manual-pairing-form > div:nth-child(1) { flex:0 0 100px !important; }
+            .manual-pairing-form > div:nth-child(2),
+            .manual-pairing-form > div:nth-child(3) { flex:1 1 180px !important; }
+            .manual-pairing-form > div:nth-child(4) { flex:0 0 auto !important; }
+
+            /* Algorithm settings for tablet */
+            .algorithm-settings {
+                flex-wrap:wrap !important;
+                gap:16px !important;
+            }
+
+            table { font-size:.75rem; }
+            th,td { padding:7px 8px; }
+        }
+
+        /* Desktop devices - 1025px and up */
+        @media (min-width: 1025px) {
+            .main { padding:24px 32px 40px; }
+
+            /* Larger screens can show more content */
+            .table-wrapper table { font-size:.85rem; }
+            th,td { padding:10px 12px; }
+        }
+
+        /* Ultra-wide screens - 1440px and up */
+        @media (min-width: 1440px) {
+            .main { max-width:1400px; margin:0 auto; padding:24px 40px 40px; }
+
+            .sidebar { width:280px; padding:20px 18px; }
+            .sidebar h1 { font-size:1.2rem; }
+
+            .manual-pairing-form {
+                max-width:1100px !important;
+            }
+        }
+
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+            button, .btn {
+                min-height:44px;
+                padding:12px 16px;
+                font-size:.9rem;
+            }
+            .mini {
+                min-height:36px;
+                padding:8px 12px;
+                font-size:.75rem;
+            }
+            input[type="checkbox"] {
+                width:18px;
+                height:18px;
+                margin-right:8px;
+            }
+            .nav-item {
+                padding:12px;
+                margin-bottom:8px;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .sidebar, .mobile-menu-toggle, .sidebar-overlay { display:none !important; }
+            .main { margin-left:0 !important; padding:12px !important; }
+            .actions { display:none !important; }
+            .mobile-hide { display:table-cell !important; }
+            button { display:none !important; }
+        }
     </style>
 </head>
 <body>
-    <aside class="sidebar">
+    <!-- Mobile menu toggle -->
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">☰ Menu</button>
+
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" onclick="closeMobileMenu()"></div>
+
+    <aside class="sidebar" id="sidebar">
         <h1>Chess Manager</h1>
         <div id="navPlayers" class="nav-item active" onclick="navigate('players')"><span>Players</span></div>
         <div id="navPairing" class="nav-item disabled" onclick="navigate('pairing')"><span>Pairing</span></div>
@@ -114,7 +343,7 @@
             <!-- Pairing Algorithm Configuration -->
             <div style="background:#f8f9fa; border:1px solid var(--border); padding:12px; border-radius:var(--radius); margin-bottom:20px;">
                 <h3 style="margin:0 0 12px; font-size:.9rem; color:#666;">Pairing Algorithm Settings</h3>
-                <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+                <div class="algorithm-settings" style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
                     <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
                         <input type="checkbox" id="categoryOnlyPairing">
                         <span>Category-only pairing</span>
@@ -138,7 +367,7 @@
             <div style="margin-bottom:14px;">
                 <div style="background:#fff; border:1px solid var(--border); padding:12px; border-radius:var(--radius); margin-bottom:20px;">
                     <h3 style="margin:0 0 8px; font-size:.9rem;">Manual Pairing</h3>
-                    <div style="display:flex; gap:12px; align-items:flex-end; max-width:900px;">
+                    <div class="manual-pairing-form" style="display:flex; gap:12px; align-items:flex-end; max-width:900px;">
                         <div style="flex:0 0 120px;">
                             <label>Table # (optional)</label>
                             <input type="number" id="manualTableInput" min="1" placeholder="Auto" />
@@ -201,24 +430,6 @@
         /******************************
          * Navigation
          ******************************/
-        function navigate(section) {
-            if (section === 'pairing' && players.length < 2) return;
-            if (section === 'results' && players.length < 2) return;
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById('nav' + capitalize(section)).classList.add('active');
-            document.querySelectorAll('.section-view').forEach(el => el.classList.add('hidden'));
-            document.getElementById('section' + capitalize(section)).classList.remove('hidden');
-            if (section === 'pairing') {
-                refreshPairingSelectors();
-                renderPairingsTables();
-            }
-            if (section === 'results') {
-                renderResultsTable();
-            }
-            if (section === 'players') {
-                renderPlayersTable();
-            }
-        }
         function capitalize(s){return s.charAt(0).toUpperCase()+s.slice(1);}
         function updateNavEnablement(){
             const enable = players.length >= 2;
@@ -293,16 +504,16 @@
             const wrapper = document.getElementById('playersTableWrapper');
             if(!players.length){wrapper.innerHTML='<p class="muted">No players loaded. Use "Load Players" or add manually.</p>'; return;}
             let html = '<div class="table-wrapper"><table><thead><tr>'+
-                '<th>ID</th><th>Name</th><th>Category</th><th>Rating</th><th>Presence</th><th>Teacher</th><th>Grade</th><th>Actions</th></tr></thead><tbody>';
+                '<th class="mobile-hide">ID</th><th>Name</th><th>Category</th><th>Rating</th><th>Presence</th><th class="mobile-hide">Teacher</th><th class="mobile-hide">Grade</th><th>Actions</th></tr></thead><tbody>';
             players.forEach(p=>{
                 html+=`<tr>`+
-                    `<td>${p.id}</td>`+
+                    `<td class="mobile-hide">${p.id}</td>`+
                     `<td>${escapeHtml(p.name)}</td>`+
                     `<td>${p.category}</td>`+
                             `<td>${p.rating}${p.lastDelta>0?`<span class=\"rate-up\" title=\"+${p.lastDelta}\">▲ (+${p.lastDelta})</span>`:p.lastDelta<0?`<span class=\"rate-down\" title=\"${p.lastDelta}\">▼ (${p.lastDelta})</span>`:''}</td>`+
                     `<td class="checkbox-center"><input type="checkbox" ${p.presence?'checked':''} onchange="togglePresence(${p.id},this.checked)" title="Toggle presence" /></td>`+
-                    `<td>${escapeHtml(p.teacher)}</td>`+
-                    `<td>${escapeHtml(p.grade)}</td>`+
+                    `<td class="mobile-hide">${escapeHtml(p.teacher)}</td>`+
+                    `<td class="mobile-hide">${escapeHtml(p.grade)}</td>`+
                     `<td><button class="mini" onclick="openPlayerModal(${p.id})">Edit</button> <button class="mini danger" onclick="confirmDeletePlayer(${p.id})">Delete</button></td>`+
                 `</tr>`;
             });
@@ -426,15 +637,15 @@
                     tableDisplay = `Table ${mp.tableNumber}`;
                 }
 
-                html += `<div style="margin-bottom:6px; border:1px solid var(--border); padding:8px; border-radius:4px; background:#fff; max-width:946px;">`+
-                    `<div style="display:flex; gap:12px; align-items:center; justify-content:space-between;">`+
-                    `<div style="display:flex; gap:12px; align-items:center;">`+
+                html += `<div class="manual-pair-container" style="margin-bottom:6px; border:1px solid var(--border); padding:8px; border-radius:4px; background:#fff; max-width:946px;">`+
+                    `<div class="manual-pair-item" style="display:flex; gap:12px; align-items:center; justify-content:space-between;">`+
+                    `<div class="manual-pair-info" style="display:flex; gap:12px; align-items:center;">`+
                     `<div style="flex:0 0 150px; font-weight:bold;">${tableDisplay}</div>`+
                     `<div style="flex:0 0 auto;">${label1}</div>`+
                     `<div style="flex:0 0 20px; text-align:center; color:#666;">vs</div>`+
                     `<div style="flex:0 0 auto;">${label2}</div>`+
                     `</div>`+
-                    `<div style="display:flex; gap:8px; align-items:center;">`+
+                    `<div class="manual-pair-controls" style="display:flex; gap:8px; align-items:center;">`+
                     `<span class="tag manual">MANUAL</span>`+
                     `<button class="mini danger" onclick="deleteManualPair(${i})">Delete</button>`+
                     `</div>`+
@@ -576,18 +787,18 @@
             // Detailed
             const detailedWrapper = document.getElementById('pairingsDetailedWrapper');
             if(!combined.length){ detailedWrapper.innerHTML='<p class="muted">No pairings yet. Use Generate Pairings.</p>'; return; }
-            let html = '<table><thead><tr><th>Table</th><th>Player 1</th><th>Cat</th><th>Rating</th><th>Player 2</th><th>Cat</th><th>Rating</th><th>Type</th></tr></thead><tbody>';
+            let html = '<table><thead><tr><th>Table</th><th>Player 1</th><th class="mobile-hide">Cat</th><th class="mobile-hide">Rating</th><th>Player 2</th><th class="mobile-hide">Cat</th><th class="mobile-hide">Rating</th><th>Type</th></tr></thead><tbody>';
             combined.forEach(p=>{
                 const p1 = p.p1Id? players.find(pl=>pl.id===p.p1Id): null;
                 const p2 = p.p2Id? players.find(pl=>pl.id===p.p2Id): null;
                 html += `<tr>`+
                     `<td>${p.displayTableNumber || p.tableNumber}</td>`+
                     `<td>${p1? escapeHtml(p1.name): '<span class="no-partner">(No partner)</span>'}</td>`+
-                    `<td>${p1? p1.category:''}</td>`+
-                    `<td>${p1? p1.rating:''}</td>`+
+                    `<td class="mobile-hide">${p1? p1.category:''}</td>`+
+                    `<td class="mobile-hide">${p1? p1.rating:''}</td>`+
                     `<td>${p2? escapeHtml(p2.name): '<span class="no-partner">(No partner)</span>'}</td>`+
-                    `<td>${p2? p2.category:''}</td>`+
-                    `<td>${p2? p2.rating:''}</td>`+
+                    `<td class="mobile-hide">${p2? p2.category:''}</td>`+
+                    `<td class="mobile-hide">${p2? p2.rating:''}</td>`+
                     `<td><span class="tag ${p.isManual?'manual':'auto'}">${p.isManual?'MANUAL':'AUTO'}</span></td>`+
                 `</tr>`;
             });
@@ -617,15 +828,15 @@
                 return;
             }
 
-            let html = '<table><thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Rating</th><th>Teacher</th><th>Grade</th></tr></thead><tbody>';
+            let html = '<table><thead><tr><th class="mobile-hide">ID</th><th>Name</th><th>Category</th><th class="mobile-hide">Rating</th><th class="mobile-hide">Teacher</th><th class="mobile-hide">Grade</th></tr></thead><tbody>';
             absentPlayers.forEach(p=>{
                 html += `<tr style="opacity: 0.7;">`+
-                    `<td>${p.id}</td>`+
+                    `<td class="mobile-hide">${p.id}</td>`+
                     `<td>${escapeHtml(p.name)}</td>`+
                     `<td>${p.category}</td>`+
-                    `<td>${p.rating}</td>`+
-                    `<td>${escapeHtml(p.teacher)}</td>`+
-                    `<td>${escapeHtml(p.grade)}</td>`+
+                    `<td class="mobile-hide">${p.rating}</td>`+
+                    `<td class="mobile-hide">${escapeHtml(p.teacher)}</td>`+
+                    `<td class="mobile-hide">${escapeHtml(p.grade)}</td>`+
                 `</tr>`;
             });
             html += '</tbody></table>';
@@ -661,7 +872,7 @@
         function renderResultsTable(){
             const wrapper = document.getElementById('resultsTableWrapper');
             if(!results.length){ wrapper.innerHTML='<p class="muted">No results recorded yet.</p>'; return; }
-                let html='<table><thead><tr><th>ID</th><th>Player 1 (Rating Δ)</th><th>Player 2 (Rating Δ)</th><th>Outcome</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+                let html='<table><thead><tr><th class="mobile-hide">ID</th><th>Player 1</th><th>Player 2</th><th>Outcome</th><th class="mobile-hide">Status</th><th>Actions</th></tr></thead><tbody>';
             results.forEach(r=>{
                 const p1 = players.find(p=>p.id===r.p1Id); const p2 = players.find(p=>p.id===r.p2Id);
                     const d1 = r.applied ? (typeof r.deltaP1==='number'? r.deltaP1 : 0) : 0;
@@ -675,11 +886,11 @@
                         return base + ')';
                     };
                     html += `<tr>`+
-                        `<td>${r.id}:</td>`+
+                        `<td class="mobile-hide">${r.id}:</td>`+
                         `<td>${fmtPlayer(p1,d1)}</td>`+
                         `<td>${fmtPlayer(p2,d2)}</td>`+
-                        `<td>${r.outcome==='P1'? 'Player 1 wins': r.outcome==='P2'? 'Player 2 wins':'Draw'}</td>`+
-                        `<td>${r.applied?'<span class=\"tag applied\" title=\"Ratings updated from this result\">APPLIED</span>':'<span class=\"tag auto\" title=\"Pending rating update\">PENDING</span>'}</td>`+
+                        `<td>${r.outcome==='P1'? 'P1 wins': r.outcome==='P2'? 'P2 wins':'Draw'}</td>`+
+                        `<td class="mobile-hide">${r.applied?'<span class=\"tag applied\" title=\"Ratings updated from this result\">APPLIED</span>':'<span class=\"tag auto\" title=\"Pending rating update\">PENDING</span>'}</td>`+
                         `<td>${r.applied?`<button class=\"mini danger\" onclick=\"deleteResult(${r.id})\">Delete</button>`:`<button class=\"mini\" onclick=\"editResult(${r.id})\">Edit</button> <button class=\"mini danger\" onclick=\"deleteResult(${r.id})\">Delete</button>`}</td>`+
                     `</tr>`;
             });
@@ -781,6 +992,47 @@
         }
         function closeModal(btn){ const backdrop=btn.closest('.modal-backdrop'); backdrop.remove(); }
         function confirmModal(btn){ const backdrop=btn.closest('.modal-backdrop'); if(!backdrop) return; const ok = backdrop._onConfirm? backdrop._onConfirm(): true; if(ok!==false) backdrop.remove(); }
+
+        /******************************
+         * Mobile Menu Functions
+         ******************************/
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('show');
+        }
+
+        function closeMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('show');
+        }
+
+        // Close mobile menu when navigation occurs
+        function navigate(section) {
+            if (section === 'pairing' && players.length < 2) return;
+            if (section === 'results' && players.length < 2) return;
+
+            // Close mobile menu on navigation
+            closeMobileMenu();
+
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('nav' + capitalize(section)).classList.add('active');
+            document.querySelectorAll('.section-view').forEach(el => el.classList.add('hidden'));
+            document.getElementById('section' + capitalize(section)).classList.remove('hidden');
+            if (section === 'pairing') {
+                refreshPairingSelectors();
+                renderPairingsTables();
+            }
+            if (section === 'results') {
+                renderResultsTable();
+            }
+            if (section === 'players') {
+                renderPlayersTable();
+            }
+        }
 
         /******************************
          * Helpers
