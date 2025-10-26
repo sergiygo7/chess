@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Chess Tournament Manager</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        :root {
+            --bg: #f8f9fb;
+            --sidebar-bg: #20252b;
+            --sidebar-active: #2f88ff;
+            --text: #1b1f23;
+            --border: #d0d7de;
+            --danger: #d92d3a;
+            --success: #2e8540;
+            --warning: #f6c344;
+            --radius: 6px;
+            --accent: #4caf50;
+            --muted: #666;
+            font-size: 16px;
+        }
+        * { box-sizing: border-box; }
+        body,html { margin:0; padding:0; font-family: system-ui,-apple-system,"Segoe UI",Arial,sans-serif; background: var(--bg); color: var(--text); }
+        body { display:flex; min-height:100vh; }
+        /* Sidebar */
+        .sidebar { width:250px; background: var(--sidebar-bg); color:#fff; display:flex; flex-direction:column; padding:18px 16px; }
+        .sidebar h1 { font-size:1.1rem; margin:0 0 14px; font-weight:600; letter-spacing:.5px; }
+        .nav-item { padding:10px 12px; margin-bottom:6px; border-radius: var(--radius); cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.06); }
+        .nav-item span { font-size:.9rem; }
+        .nav-item.active { background: var(--sidebar-active); font-weight:600; }
+        .nav-item.disabled { opacity:.4; cursor:not-allowed; }
+        .nav-item:not(.disabled):hover { background:#3a4752; }
+        .version { margin-top:auto; font-size:.7rem; opacity:.6; }
+        /* Main */
+        .main { flex:1; padding:24px 28px 40px; overflow-y:auto; }
+        .main h2 { margin:0 0 14px; font-weight:600; }
+        .actions { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+        button, .btn { background:#fff; border:1px solid var(--border); padding:8px 14px; border-radius:var(--radius); font-size:.85rem; cursor:pointer; display:inline-flex; gap:6px; align-items:center; line-height:1.2; }
+        button:hover { background:#f0f3f6; }
+        button.primary { background: var(--accent); color:#fff; border-color: var(--accent); }
+        button.primary:hover { background:#3d9447; }
+        button.danger { background: var(--danger); color:#fff; border-color: var(--danger); }
+        button.danger:hover { background:#b3202c; }
+        button.outline { background:transparent; }
+        table { width:100%; border-collapse:collapse; margin-bottom:20px; background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+        thead { background:#eef2f6; }
+        th,td { padding:8px 10px; font-size:.8rem; text-align:left; border-bottom:1px solid var(--border); }
+        tbody tr:last-child td { border-bottom:none; }
+        tbody tr:hover { background:#f8fbff; }
+        .tag { display:inline-block; padding:2px 6px; font-size:.65rem; border-radius:999px; background:#dde7f2; text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
+        .tag.manual { background:#ffe6cc; color:#a35300; }
+        .tag.auto { background:#e2f7e2; color:#256327; }
+    .tag.applied { background:#d4f1ff; color:#004b74; }
+        .checkbox-center { text-align:center; }
+        .muted { color: var(--muted); font-size:.7rem; }
+        .no-partner { font-weight:600; background:#fafaa7; padding:2px 6px; border-radius:4px; }
+    .rate-up { color:#2e8540; font-size:.7rem; font-weight:700; margin-left:4px; }
+    .rate-down { color:#d92d3a; font-size:.7rem; font-weight:700; margin-left:4px; }
+        /* Layout helpers */
+        .flex { display:flex; }
+        .flex.gap { gap:12px; }
+        .flex.col { flex-direction:column; }
+        .grow { flex:1; }
+        .hidden { display:none !important; }
+        .divider { height:1px; background:#e1e4e8; margin:16px 0; }
+        .center { text-align:center; }
+        /* Modal */
+        .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:flex-start; justify-content:center; padding:60px 20px; z-index:100; }
+        .modal { background:#fff; width:420px; max-width:100%; border-radius:var(--radius); box-shadow:0 10px 28px -6px rgba(0,0,0,.3); border:1px solid var(--border); animation:pop .18s ease-out; }
+        @keyframes pop { from { transform:translateY(12px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+        .modal header { padding:14px 18px 10px; font-weight:600; border-bottom:1px solid var(--border); }
+        .modal .content { padding:16px 18px 10px; }
+        .modal .actions { padding:10px 18px 18px; border-top:1px solid var(--border); justify-content:flex-end; }
+        .modal label { display:block; font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; margin:10px 0 4px; font-weight:600; }
+        .modal input[type=text],
+        .modal input[type=number],
+        .modal select { width:100%; padding:7px 8px; border:1px solid var(--border); border-radius:var(--radius); font-size:.8rem; background:#fff; }
+        .danger-text { color: var(--danger); font-weight:600; }
+        .scroll-y { max-height:320px; overflow-y:auto; }
+        .mini { font-size:.65rem; padding:3px 8px; }
+        .w50 { width:50%; }
+        .table-wrapper { overflow-x:auto; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <h1>Chess Manager</h1>
+        <div id="navPlayers" class="nav-item active" onclick="navigate('players')"><span>Players</span></div>
+        <div id="navPairing" class="nav-item disabled" onclick="navigate('pairing')"><span>Pairing</span></div>
+        <div id="navResults" class="nav-item disabled" onclick="navigate('results')"><span>Game Result</span></div>
+        <div class="version">v0.1 SPA</div>
+    </aside>
+    <main class="main">
+        <div id="sectionPlayers" class="section-view">
+            <h2>Players</h2>
+            <div class="actions">
+                <button class="primary" onclick="triggerLoadPlayers()">Load Players (CSV)</button>
+                <button onclick="openPlayerModal()">Add New Player</button>
+                <button onclick="downloadPlayersCSV()">Download Players as CSV</button>
+                <input id="playersFileInput" type="file" accept=".csv" class="hidden" onchange="handlePlayersFile(event)" />
+            </div>
+            <div id="playersTableWrapper"></div>
+        </div>
+
+        <div id="sectionPairing" class="section-view hidden">
+            <h2>Pairing</h2>
+            <div class="actions">
+                <button onclick="generatePairings()" class="primary">Generate Pairings</button>
+                <button onclick="clearManualPairings()" class="danger">Clear All Manual Pairings</button>
+                <button onclick="downloadPairingsDetailed()">Download Detailed CSV</button>
+                <button onclick="downloadPairingsPublic()">Download Public CSV</button>
+            </div>
+
+            <!-- Pairing Algorithm Configuration -->
+            <div style="background:#f8f9fa; border:1px solid var(--border); padding:12px; border-radius:var(--radius); margin-bottom:20px;">
+                <h3 style="margin:0 0 12px; font-size:.9rem; color:#666;">Pairing Algorithm Settings</h3>
+                <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="categoryOnlyPairing">
+                        <span>Category-only pairing</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="ratingBasedPairing" checked>
+                        <span>Rating-based pairing</span>
+                    </label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <label for="ratingRange">Rating range (±):</label>
+                        <input type="number" id="ratingRange" min="0" max="500" step="25" value="100" style="width:80px;">
+                        <span style="font-size:0.85em; color:#666;">points</span>
+                    </div>
+                </div>
+                <div style="margin-top:8px; font-size:0.8em; color:#666;">
+                    <strong>Category-only:</strong> Pair players within same categories only (Advanced↔Intermediate↔Beginner as fallback)<br>
+                    <strong>Rating-based:</strong> Pair by closest ratings within range. <strong>Random:</strong> Uncheck rating-based for random pairing.
+                </div>
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <div style="background:#fff; border:1px solid var(--border); padding:12px; border-radius:var(--radius); margin-bottom:20px;">
+                    <h3 style="margin:0 0 8px; font-size:.9rem;">Manual Pairing</h3>
+                    <div style="display:flex; gap:12px; align-items:flex-end; max-width:900px;">
+                        <div style="flex:0 0 120px;">
+                            <label>Table # (optional)</label>
+                            <input type="number" id="manualTableInput" min="1" placeholder="Auto" />
+                        </div>
+                        <div style="flex:0 0 220px;">
+                            <label>Player 1</label>
+                            <select id="manualPlayer1"></select>
+                        </div>
+                        <div style="flex:0 0 220px;">
+                            <label>Player 2</label>
+                            <select id="manualPlayer2"></select>
+                        </div>
+                        <div style="flex:0 0 auto;">
+                            <button onclick="addManualPairing()">Add Manual Pair</button>
+                        </div>
+                    </div>
+                    <div class="divider"></div>
+                    <div id="manualPairsList" class="scroll-y" style="font-size:.75rem;"></div>
+                </div>
+
+                <h3 style="margin:0 0 6px; font-size:.9rem;">Detailed Pairings</h3>
+                <div id="pairingsDetailedWrapper" class="table-wrapper" style="margin-bottom:20px;"></div>
+
+                <h3 style="margin:0 0 6px; font-size:.9rem;">Public Print Table</h3>
+                <div id="pairingsPublicWrapper" class="table-wrapper" style="margin-bottom:20px;"></div>
+
+                <h3 style="margin:0 0 6px; font-size:.9rem;">Absent Players</h3>
+                <div id="absentPlayersWrapper" class="table-wrapper"></div>
+            </div>
+        </div>
+
+        <div id="sectionResults" class="section-view hidden">
+            <h2>Game Results</h2>
+            <div class="actions">
+                <button onclick="openResultModal()">Add Result</button>
+                <button onclick="recalculateRatings()" class="primary">Recalculate Ratings</button>
+                <button onclick="downloadPlayersCSV()">Download Updated Players (CSV)</button>
+            </div>
+            <div id="resultsTableWrapper"></div>
+        </div>
+    </main>
+
+    <!-- Modal root -->
+    <div id="modalRoot"></div>
+
+    <script>
+        /******************************
+         * Global State
+         ******************************/
+        let players = []; // {id, name, category, rating, presence, teacher, grade}
+        let manualPairings = []; // {tableNumber|null, p1Id|null, p2Id|null, isManual:true}
+        let autoPairings = []; // same shape but isManual:false
+        let results = []; // {id, p1Id, p2Id, outcome: 'P1'|'P2'|'DRAW'}
+        let nextPlayerId = 1;
+        let nextResultId = 1;
+
+        const CATEGORY_VALUES = ['Advanced','Intermediate','Beginner'];
+        const CSV_HEADERS = ['player id','name','category','rates','presence','teacher name','class'];
+
+        /******************************
+         * Navigation
+         ******************************/
+        function navigate(section) {
+            if (section === 'pairing' && players.length < 2) return;
+            if (section === 'results' && players.length < 2) return;
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('nav' + capitalize(section)).classList.add('active');
+            document.querySelectorAll('.section-view').forEach(el => el.classList.add('hidden'));
+            document.getElementById('section' + capitalize(section)).classList.remove('hidden');
+            if (section === 'pairing') {
+                refreshPairingSelectors();
+                renderPairingsTables();
+            }
+            if (section === 'results') {
+                renderResultsTable();
+            }
+            if (section === 'players') {
+                renderPlayersTable();
+            }
+        }
+        function capitalize(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+        function updateNavEnablement(){
+            const enable = players.length >= 2;
+            ['navPairing','navResults'].forEach(id => {
+                const el = document.getElementById(id);
+                if (enable) el.classList.remove('disabled'); else el.classList.add('disabled');
+            });
+        }
+
+        /******************************
+         * Players Section
+         ******************************/
+        function triggerLoadPlayers(){
+            document.getElementById('playersFileInput').click();
+        }
+        function handlePlayersFile(e){
+            const file = e.target.files[0];
+            if(!file){return;}
+                // Reset full tournament state before loading new players
+                resetTournamentState();
+                const reader = new FileReader();
+                reader.onload = evt => {
+                    const text = evt.target.result.trim();
+                    importPlayersFromCSV(text);
+                    // allow selecting same file again
+                    e.target.value = '';
+                };
+                reader.readAsText(file);
+        }
+            function resetTournamentState(){
+                players = [];
+                manualPairings = [];
+                autoPairings = [];
+                results = [];
+                nextPlayerId = 1;
+                nextResultId = 1;
+                document.getElementById('manualPairsList').innerHTML='';
+                document.getElementById('pairingsDetailedWrapper').innerHTML='';
+                document.getElementById('pairingsPublicWrapper').innerHTML='';
+                document.getElementById('resultsTableWrapper').innerHTML='';
+            }
+        function importPlayersFromCSV(text){
+            const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
+            if(lines.length<2){alert('CSV has no data');return;}
+            const header = lines[0].split(',').map(h=>h.trim().toLowerCase());
+            const missing = CSV_HEADERS.filter(h=>!header.includes(h));
+            if(missing.length){alert('Missing headers: '+missing.join(', '));}
+            const idx = h=> header.indexOf(h);
+            lines.slice(1).forEach(line=>{
+                const parts = line.split(',').map(v=>v.trim());
+                if(parts.every(p=>!p)) return;
+                const rawId = parts[idx('player id')];
+                const id = rawId? parseInt(rawId) : nextPlayerId++;
+                if(id >= nextPlayerId) nextPlayerId = id+1;
+                const name = parts[idx('name')] || 'Unnamed';
+                let category = parts[idx('category')] || 'Beginner';
+                // Case-insensitive category validation / normalization
+                const catLower = category.toLowerCase();
+                const matched = CATEGORY_VALUES.find(c => c.toLowerCase() === catLower);
+                category = matched || 'Beginner';
+                const rating = parseInt(parts[idx('rates')])||0;
+                const presenceRaw = (parts[idx('presence')]||'').toLowerCase();
+                const presence = !(presenceRaw==='n'||presenceRaw==='no'||presenceRaw==='not'||presenceRaw==='false');
+                const teacher = parts[idx('teacher name')]||'';
+                const grade = parts[idx('class')]||'';
+                 players.push({id,name,category,rating,presence,teacher,grade,lastDelta:0});
+            });
+            renderPlayersTable();
+            updateNavEnablement();
+        }
+        function renderPlayersTable(){
+            const wrapper = document.getElementById('playersTableWrapper');
+            if(!players.length){wrapper.innerHTML='<p class="muted">No players loaded. Use "Load Players" or add manually.</p>'; return;}
+            let html = '<div class="table-wrapper"><table><thead><tr>'+
+                '<th>ID</th><th>Name</th><th>Category</th><th>Rating</th><th>Presence</th><th>Teacher</th><th>Grade</th><th>Actions</th></tr></thead><tbody>';
+            players.forEach(p=>{
+                html+=`<tr>`+
+                    `<td>${p.id}</td>`+
+                    `<td>${escapeHtml(p.name)}</td>`+
+                    `<td>${p.category}</td>`+
+                            `<td>${p.rating}${p.lastDelta>0?`<span class=\"rate-up\" title=\"+${p.lastDelta}\">▲ (+${p.lastDelta})</span>`:p.lastDelta<0?`<span class=\"rate-down\" title=\"${p.lastDelta}\">▼ (${p.lastDelta})</span>`:''}</td>`+
+                    `<td class="checkbox-center"><input type="checkbox" ${p.presence?'checked':''} onchange="togglePresence(${p.id},this.checked)" title="Toggle presence" /></td>`+
+                    `<td>${escapeHtml(p.teacher)}</td>`+
+                    `<td>${escapeHtml(p.grade)}</td>`+
+                    `<td><button class="mini" onclick="openPlayerModal(${p.id})">Edit</button> <button class="mini danger" onclick="confirmDeletePlayer(${p.id})">Delete</button></td>`+
+                `</tr>`;
+            });
+            html+='</tbody></table></div>';
+            wrapper.innerHTML=html;
+        }
+        function togglePresence(id,val){
+            const p=players.find(pl=>pl.id===id); if(!p) return; p.presence=val; }
+        function openPlayerModal(id){
+            const isEdit = !!id; const player = players.find(p=>p.id===id)||{};
+            showModal({
+                title: isEdit?`Edit Player #${player.id}`:'Add New Player',
+                body: modalPlayerForm(player,isEdit),
+                onConfirm: ()=>{
+                    const form = document.getElementById('playerForm');
+                    const name = form.name.value.trim();
+                    const category = form.category.value;
+                    const rating = parseInt(form.rating.value)||0;
+                    const presence = form.presence.checked;
+                    const teacher = form.teacher.value.trim();
+                    const grade = form.grade.value.trim();
+                    if(!name){alert('Name required');return false;}
+                    if(isEdit){
+                        player.name=name; player.category=category; player.rating=rating; player.presence=presence; player.teacher=teacher; player.grade=grade;
+                    } else {
+                        players.push({id: nextPlayerId++, name, category, rating, presence, teacher, grade, lastDelta:0});
+                    }
+                    renderPlayersTable(); updateNavEnablement(); return true;
+                }
+            });
+        }
+        function modalPlayerForm(p,isEdit){
+            return `<form id="playerForm">`+
+                `<label>Name</label><input name="name" type="text" value="${p.name||''}" required />`+
+                `<label>Category</label><select name="category">${CATEGORY_VALUES.map(c=>`<option ${p.category===c?'selected':''}>${c}</option>`).join('')}</select>`+
+                `<label>Rating</label><input name="rating" type="number" min="0" value="${p.rating||0}" />`+
+                `<label>Present for next game</label><input name="presence" type="checkbox" ${p.presence||!isEdit?'checked':''} />`+
+                `<label>Teacher's Name</label><input name="teacher" type="text" value="${p.teacher||''}" />`+
+                `<label>Grade</label><input name="grade" type="text" value="${p.grade||''}" />`+
+                `</form>`;
+        }
+        function confirmDeletePlayer(id){
+            const p = players.find(pl=>pl.id===id); if(!p) return;
+            showModal({
+                title:'Remove Player',
+                body:`<p>Are you sure you want to remove player <strong>${escapeHtml(p.name)}</strong> from the list?</p>`,
+                confirmText:'Delete',
+                confirmClass:'danger',
+                onConfirm:()=>{ players = players.filter(pl=>pl.id!==id); renderPlayersTable(); updateNavEnablement(); return true; }
+            });
+        }
+        function downloadPlayersCSV(){
+            let csv = CSV_HEADERS.join(',')+'\n';
+            players.forEach(p=>{
+                csv += `${p.id},${csvEscape(p.name)},${p.category},${p.rating},${p.presence?'yes':'no'},${csvEscape(p.teacher)},${csvEscape(p.grade)}\n`;
+            });
+            triggerDownload(csv,'players.csv');
+        }
+        function csvEscape(s){ return '"'+(s||'').replace(/"/g,'""')+'"'; }
+
+        /******************************
+         * Pairing Logic
+         ******************************/
+        function refreshPairingSelectors(){
+            const sel1 = document.getElementById('manualPlayer1');
+            const sel2 = document.getElementById('manualPlayer2');
+            [sel1,sel2].forEach(sel=>{ sel.innerHTML=''; });
+            const noOpt = document.createElement('option'); noOpt.value='NO_PARTNER'; noOpt.textContent='(No partner)';
+            sel1.appendChild(noOpt.cloneNode(true)); sel2.appendChild(noOpt.cloneNode(true));
+            players.filter(p=>p.presence).forEach(p=>{
+                const opt=document.createElement('option'); opt.value=p.id; opt.textContent=`${p.name} (${p.category}, ${p.rating})`; sel1.appendChild(opt.cloneNode(true)); sel2.appendChild(opt); });
+        }
+        function addManualPairing(){
+            const tableRaw = document.getElementById('manualTableInput').value.trim();
+            const p1Val = document.getElementById('manualPlayer1').value;
+            const p2Val = document.getElementById('manualPlayer2').value;
+            if(!p1Val || !p2Val){ alert('Select both players (or No partner)'); return; }
+            if(p1Val===p2Val && p1Val!=='NO_PARTNER'){ alert('Cannot pair player with themselves'); return; }
+            const p1Id = p1Val==='NO_PARTNER'? null : parseInt(p1Val);
+            const p2Id = p2Val==='NO_PARTNER'? null : parseInt(p2Val);
+            // Prevent pair of two "No partner" placeholders
+            if(p1Id===null && p2Id===null){
+                alert('Cannot create a pair with two "No partner" entries. Select at least one real player.');
+                return;
+            }
+            // prevent duplicate involvement (ignore null placeholder so '(No partner)' can be reused)
+            const already = manualPairings.find(mp =>
+                (p1Id !== null && (mp.p1Id === p1Id || mp.p2Id === p1Id)) ||
+                (p2Id !== null && (mp.p1Id === p2Id || mp.p2Id === p2Id))
+            );
+            if(already){ alert('One selected player already in a manual pairing'); return; }
+            let tableNumber = tableRaw? parseInt(tableRaw): null;
+            if(tableNumber && manualPairings.some(mp=>mp.tableNumber===tableNumber)) { alert('Table number already used by manual pairing'); return; }
+            manualPairings.push({tableNumber,p1Id,p2Id,isManual:true,isAutoTable:!tableNumber});
+                // Reset inputs for next quick entry
+                const tableInput = document.getElementById('manualTableInput');
+                const sel1 = document.getElementById('manualPlayer1');
+                const sel2 = document.getElementById('manualPlayer2');
+                tableInput.value='';
+                sel1.value='NO_PARTNER';
+                sel2.value='NO_PARTNER';
+                sel1.focus();
+            renderManualPairsList();
+            generatePairings();
+        }
+        function renderManualPairsList(){
+            const box = document.getElementById('manualPairsList');
+            if(!manualPairings.length){ box.innerHTML='<p class="muted">No manual pairings.</p>'; return; }
+            let html='';
+            manualPairings.forEach((mp,i)=>{
+                const p1 = mp.p1Id? players.find(p=>p.id===mp.p1Id): null;
+                const p2 = mp.p2Id? players.find(p=>p.id===mp.p2Id): null;
+                const label1 = p1? `${escapeHtml(p1.name)} (${p1.rating})`:'<span class="no-partner">(No partner)</span>';
+                const label2 = p2? `${escapeHtml(p2.name)} (${p2.rating})`:'<span class="no-partner">(No partner)</span>';
+
+                // Display table info
+                let tableDisplay;
+                if(mp.isAutoTable) {
+                    tableDisplay = mp.assignedTableNumber ? `Auto table (${mp.assignedTableNumber})` : 'Auto table';
+                } else {
+                    tableDisplay = `Table ${mp.tableNumber}`;
+                }
+
+                html += `<div style="margin-bottom:6px; border:1px solid var(--border); padding:8px; border-radius:4px; background:#fff; max-width:946px;">`+
+                    `<div style="display:flex; gap:12px; align-items:center; justify-content:space-between;">`+
+                    `<div style="display:flex; gap:12px; align-items:center;">`+
+                    `<div style="flex:0 0 150px; font-weight:bold;">${tableDisplay}</div>`+
+                    `<div style="flex:0 0 auto;">${label1}</div>`+
+                    `<div style="flex:0 0 20px; text-align:center; color:#666;">vs</div>`+
+                    `<div style="flex:0 0 auto;">${label2}</div>`+
+                    `</div>`+
+                    `<div style="display:flex; gap:8px; align-items:center;">`+
+                    `<span class="tag manual">MANUAL</span>`+
+                    `<button class="mini danger" onclick="deleteManualPair(${i})">Delete</button>`+
+                    `</div>`+
+                    `</div></div>`;
+            });
+            box.innerHTML=html;
+        }
+        function deleteManualPair(i){ manualPairings.splice(i,1); renderManualPairsList(); generatePairings(); }
+        function clearManualPairings(){ if(!manualPairings.length) return; if(!confirm('Clear all manual pairings?')) return; manualPairings = []; renderManualPairsList(); generatePairings(); }
+        function generatePairings(){
+            // Get algorithm settings
+            const categoryOnly = document.getElementById('categoryOnlyPairing').checked;
+            const ratingBased = document.getElementById('ratingBasedPairing').checked;
+            const ratingRange = parseInt(document.getElementById('ratingRange').value) || 100;
+
+            // Build set of player IDs already manually paired
+            const used = new Set();
+            manualPairings.forEach(mp=>{ if(mp.p1Id) used.add(mp.p1Id); if(mp.p2Id) used.add(mp.p2Id); });
+            const available = players.filter(p=>p.presence && !used.has(p.id));
+            const alreadyPaired = new Set();
+            autoPairings = [];
+
+            // Helper function to add pairing and track paired players
+            function addPairing(p1, p2) {
+                autoPairings.push({tableNumber:null,p1Id:p1?.id||null,p2Id:p2?.id||null,isManual:false});
+                if(p1) alreadyPaired.add(p1.id);
+                if(p2) alreadyPaired.add(p2.id);
+            }
+
+            // Helper to find best partner for a player
+            function findPartner(player, candidates) {
+                const unpaired = candidates.filter(c => !alreadyPaired.has(c.id) && c.id !== player.id);
+                if(!unpaired.length) return null;
+
+                if(!ratingBased) {
+                    // Random pairing
+                    return unpaired[Math.floor(Math.random() * unpaired.length)];
+                }
+
+                // Rating-based pairing
+                const inRange = unpaired.filter(c => Math.abs(c.rating - player.rating) <= ratingRange);
+                if(inRange.length) {
+                    // Random pick from players within rating range
+                    return inRange[Math.floor(Math.random() * inRange.length)];
+                } else {
+                    // Find closest rating if no one in range
+                    return unpaired.reduce((closest, current) =>
+                        Math.abs(current.rating - player.rating) < Math.abs(closest.rating - player.rating)
+                            ? current : closest
+                    );
+                }
+            }
+
+            if(categoryOnly) {
+                // Category-only pairing
+                const groups = {Advanced:[],Intermediate:[],Beginner:[]};
+                available.forEach(p=>groups[p.category].push(p));
+
+                // Process each category individually: pair within category, then handle leftover immediately
+                const categoryOrder = ['Advanced', 'Intermediate', 'Beginner'];
+
+                categoryOrder.forEach((categoryName) => {
+                    const group = groups[categoryName];
+                    if(!group.length) return;
+
+                    // Pair within this category
+                    while(group.length >= 2) {
+                        const unpaired = group.filter(p => !alreadyPaired.has(p.id));
+                        if(unpaired.length < 2) break;
+
+                        const player1 = unpaired[0];
+                        const player2 = findPartner(player1, unpaired);
+                        if(player2) {
+                            addPairing(player1, player2);
+                        } else {
+                            break;
+                        }
+                    }
+
+                    // Handle leftover from this category immediately with "(No partner)"
+                    const leftover = group.filter(p => !alreadyPaired.has(p.id))[0];
+                    if(leftover) {
+                        addPairing(leftover, null); // Pair with "(No partner)"
+                    }
+                });
+
+            } else {
+                // Cross-category pairing allowed
+                while(available.length >= 2) {
+                    const unpaired = available.filter(p => !alreadyPaired.has(p.id));
+                    if(unpaired.length < 2) break;
+
+                    const player1 = unpaired[0];
+                    const player2 = findPartner(player1, unpaired);
+                    if(player2) {
+                        addPairing(player1, player2);
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            // Pair any remaining single players with "(No partner)"
+            const remaining = available.filter(p => !alreadyPaired.has(p.id));
+            remaining.forEach(p => addPairing(p, null));
+
+            assignTableNumbers();
+            renderManualPairsList();
+            renderPairingsTables();
+        }
+        function assignTableNumbers(){
+            // Backward compatibility: add isAutoTable flag for existing pairings without it
+            manualPairings.forEach(mp => {
+                if(mp.isAutoTable === undefined) {
+                    mp.isAutoTable = !mp.tableNumber;
+                }
+            });
+
+            // Preserve manual table numbers; allocate sequential for others
+            const taken = new Set(manualPairings.filter(mp=>mp.tableNumber && !mp.isAutoTable).map(mp=>mp.tableNumber));
+            let next=1;
+            function nextFree(){ while(taken.has(next)) next++; return next++; }
+
+            // Reset assigned numbers for auto table manual pairings
+            manualPairings.forEach(mp=>{
+                if(mp.isAutoTable) {
+                    mp.assignedTableNumber = nextFree();
+                }
+            });
+            autoPairings.forEach(ap=>{ ap.tableNumber=nextFree(); });
+        }
+        function renderPairingsTables(){
+            // Merge lists with proper table numbers for sorting
+            const combined = [...manualPairings.map(mp => ({
+                ...mp,
+                displayTableNumber: mp.isAutoTable ? mp.assignedTableNumber : mp.tableNumber,
+                sortTableNumber: mp.isAutoTable ? mp.assignedTableNumber : mp.tableNumber
+            })), ...autoPairings].sort((a,b)=> (a.sortTableNumber || a.tableNumber) - (b.sortTableNumber || b.tableNumber));
+            // Detailed
+            const detailedWrapper = document.getElementById('pairingsDetailedWrapper');
+            if(!combined.length){ detailedWrapper.innerHTML='<p class="muted">No pairings yet. Use Generate Pairings.</p>'; return; }
+            let html = '<table><thead><tr><th>Table</th><th>Player 1</th><th>Cat</th><th>Rating</th><th>Player 2</th><th>Cat</th><th>Rating</th><th>Type</th></tr></thead><tbody>';
+            combined.forEach(p=>{
+                const p1 = p.p1Id? players.find(pl=>pl.id===p.p1Id): null;
+                const p2 = p.p2Id? players.find(pl=>pl.id===p.p2Id): null;
+                html += `<tr>`+
+                    `<td>${p.displayTableNumber || p.tableNumber}</td>`+
+                    `<td>${p1? escapeHtml(p1.name): '<span class="no-partner">(No partner)</span>'}</td>`+
+                    `<td>${p1? p1.category:''}</td>`+
+                    `<td>${p1? p1.rating:''}</td>`+
+                    `<td>${p2? escapeHtml(p2.name): '<span class="no-partner">(No partner)</span>'}</td>`+
+                    `<td>${p2? p2.category:''}</td>`+
+                    `<td>${p2? p2.rating:''}</td>`+
+                    `<td><span class="tag ${p.isManual?'manual':'auto'}">${p.isManual?'MANUAL':'AUTO'}</span></td>`+
+                `</tr>`;
+            });
+            html += '</tbody></table>';
+            detailedWrapper.innerHTML=html;
+            // Public
+            const publicWrapper=document.getElementById('pairingsPublicWrapper');
+            let pub='<table><thead><tr><th>Table</th><th>Match White vs Black</th></tr></thead><tbody>';
+            combined.forEach(p=>{
+                const p1 = p.p1Id? players.find(pl=>pl.id===p.p1Id): null;
+                const p2 = p.p2Id? players.find(pl=>pl.id===p.p2Id): null;
+                const nameFmt = pl => pl? shortPublicName(pl.name): '(No partner)';
+                pub += `<tr><td>${p.displayTableNumber || p.tableNumber}:</td><td>${nameFmt(p1)} vs ${nameFmt(p2)}</td></tr>`;
+            });
+            pub+='</tbody></table>';
+            publicWrapper.innerHTML=pub;
+            // Absent Players
+            renderAbsentPlayersTable();
+        }
+
+        function renderAbsentPlayersTable(){
+            const absentWrapper = document.getElementById('absentPlayersWrapper');
+            const absentPlayers = players.filter(p => !p.presence);
+
+            if(!absentPlayers.length){
+                absentWrapper.innerHTML='<p class="muted">All players are present for this round.</p>';
+                return;
+            }
+
+            let html = '<table><thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Rating</th><th>Teacher</th><th>Grade</th></tr></thead><tbody>';
+            absentPlayers.forEach(p=>{
+                html += `<tr style="opacity: 0.7;">`+
+                    `<td>${p.id}</td>`+
+                    `<td>${escapeHtml(p.name)}</td>`+
+                    `<td>${p.category}</td>`+
+                    `<td>${p.rating}</td>`+
+                    `<td>${escapeHtml(p.teacher)}</td>`+
+                    `<td>${escapeHtml(p.grade)}</td>`+
+                `</tr>`;
+            });
+            html += '</tbody></table>';
+            absentWrapper.innerHTML = html;
+        }
+        function shortPublicName(full){ const parts=full.split(' '); return parts[0] + (parts[1]? ' '+parts[1][0]+'.':''); }
+
+        function downloadPairingsDetailed(){
+            const combined=[...manualPairings,...autoPairings].sort((a,b)=>a.tableNumber-b.tableNumber);
+            let csv='Table,Player1,Cat1,Rating1,Player2,Cat2,Rating2,Type\n';
+            combined.forEach(p=>{
+                const p1 = p.p1Id? players.find(pl=>pl.id===p.p1Id): null;
+                const p2 = p.p2Id? players.find(pl=>pl.id===p.p2Id): null;
+                csv += `${p.tableNumber},${p1?p1.name:''},${p1?p1.category:''},${p1?p1.rating:''},${p2?p2.name:''},${p2?p2.category:''},${p2?p2.rating:''},${p.isManual?'MANUAL':'AUTO'}\n`;
+            });
+            triggerDownload(csv,'pairings_detailed.csv');
+        }
+        function downloadPairingsPublic(){
+            const combined=[...manualPairings,...autoPairings].sort((a,b)=>a.tableNumber-b.tableNumber);
+            let csv='Table,Match\n';
+            combined.forEach(p=>{
+                const p1 = p.p1Id? players.find(pl=>pl.id===p.p1Id): null;
+                const p2 = p.p2Id? players.find(pl=>pl.id===p.p2Id): null;
+                const nameFmt = pl => pl? shortPublicName(pl.name): '(No partner)';
+                csv += `${p.tableNumber},${nameFmt(p1)} vs ${nameFmt(p2)}\n`;
+            });
+            triggerDownload(csv,'pairings_public.csv');
+        }
+
+        /******************************
+         * Results Section
+         ******************************/
+        function renderResultsTable(){
+            const wrapper = document.getElementById('resultsTableWrapper');
+            if(!results.length){ wrapper.innerHTML='<p class="muted">No results recorded yet.</p>'; return; }
+                let html='<table><thead><tr><th>ID</th><th>Player 1 (Rating Δ)</th><th>Player 2 (Rating Δ)</th><th>Outcome</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+            results.forEach(r=>{
+                const p1 = players.find(p=>p.id===r.p1Id); const p2 = players.find(p=>p.id===r.p2Id);
+                    const d1 = r.applied ? (typeof r.deltaP1==='number'? r.deltaP1 : 0) : 0;
+                    const d2 = r.applied ? (typeof r.deltaP2==='number'? r.deltaP2 : 0) : 0;
+                    const fmtPlayer = (pl,delta) => {
+                        if(!pl) return '?';
+                        const base = `${escapeHtml(pl.name)} (${pl.rating}`;
+                        if(!r.applied) return base + ')';
+                        if(delta>0) return base + `) <span class=\"rate-up\" title=\"+${delta}\">▲ (+${delta})</span>`;
+                        if(delta<0) return base + `) <span class=\"rate-down\" title=\"${delta}\">▼ (${delta})</span>`;
+                        return base + ')';
+                    };
+                    html += `<tr>`+
+                        `<td>${r.id}:</td>`+
+                        `<td>${fmtPlayer(p1,d1)}</td>`+
+                        `<td>${fmtPlayer(p2,d2)}</td>`+
+                        `<td>${r.outcome==='P1'? 'Player 1 wins': r.outcome==='P2'? 'Player 2 wins':'Draw'}</td>`+
+                        `<td>${r.applied?'<span class=\"tag applied\" title=\"Ratings updated from this result\">APPLIED</span>':'<span class=\"tag auto\" title=\"Pending rating update\">PENDING</span>'}</td>`+
+                        `<td>${r.applied?`<button class=\"mini danger\" onclick=\"deleteResult(${r.id})\">Delete</button>`:`<button class=\"mini\" onclick=\"editResult(${r.id})\">Edit</button> <button class=\"mini danger\" onclick=\"deleteResult(${r.id})\">Delete</button>`}</td>`+
+                    `</tr>`;
+            });
+            html+='</tbody></table>';
+            wrapper.innerHTML=html;
+        }
+        function openResultModal(){
+            if(players.length<2){ alert('Need at least 2 players'); return; }
+            showModal({
+                title:'Add Result',
+                body: resultForm(),
+                onConfirm: ()=>{
+                    const f=document.getElementById('resultForm');
+                    const p1=parseInt(f.p1.value); const p2=parseInt(f.p2.value); const outcome=f.outcome.value;
+                    if(p1===p2){ alert('Players must differ'); return false; }
+                    results.push({id: nextResultId++, p1Id:p1, p2Id:p2, outcome, applied:false, deltaP1:0, deltaP2:0});
+                    renderResultsTable(); return true;
+                }
+            });
+        }
+        function resultForm(r={}){
+            const playerOptions = players.map(p=> `<option value="${p.id}" ${r.p1Id===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('');
+            const playerOptions2 = players.map(p=> `<option value="${p.id}" ${r.p2Id===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('');
+            return `<form id="resultForm">`+
+                `<label>Player 1</label><select name="p1">${playerOptions}</select>`+
+                `<label>Player 2</label><select name="p2">${playerOptions2}</select>`+
+                `<label>Outcome</label><select name="outcome">`+
+                    `<option value="P1" ${r.outcome==='P1'?'selected':''}>Player 1 wins</option>`+
+                    `<option value="P2" ${r.outcome==='P2'?'selected':''}>Player 2 wins</option>`+
+                    `<option value="DRAW" ${r.outcome==='DRAW'?'selected':''}>Draw</option>`+
+                `</select>`+
+            `</form>`;
+        }
+        function editResult(id){
+            const r=results.find(res=>res.id===id); if(!r) return;
+            showModal({
+                title:`Edit Result #${id}`,
+                body: resultForm(r),
+                onConfirm:()=>{
+                        if(r.applied){ alert('Applied results cannot be edited. Delete and add a new result instead.'); return false; }
+                    const f=document.getElementById('resultForm');
+                    const p1=parseInt(f.p1.value); const p2=parseInt(f.p2.value); const outcome=f.outcome.value;
+                    if(p1===p2){ alert('Players must differ'); return false; }
+                    r.p1Id=p1; r.p2Id=p2; r.outcome=outcome; renderResultsTable(); return true;
+                }
+            });
+        }
+        function deleteResult(id){
+            showModal({
+                title:'Delete Result',
+                body:'Are you sure you want to delete this result?',
+                confirmText:'Delete', confirmClass:'danger',
+                onConfirm:()=>{ results = results.filter(r=>r.id!==id); renderResultsTable(); return true; }
+            });
+        }
+        function recalculateRatings(){
+                const pending = results.filter(r=>!r.applied);
+                if(!pending.length){ alert('No pending results to apply.'); return; }
+                pending.forEach(r=>{
+                    const p1 = players.find(p=>p.id===r.p1Id);
+                    const p2 = players.find(p=>p.id===r.p2Id);
+                    if(!p1||!p2) return;
+                    const before1 = p1.rating; const before2 = p2.rating;
+                    const expected1 = 1/(1+Math.pow(10,(p2.rating - p1.rating)/400));
+                    const expected2 = 1/(1+Math.pow(10,(p1.rating - p2.rating)/400));
+                    let score1, score2;
+                    if(r.outcome==='P1'){ score1=1; score2=0; } else if(r.outcome==='P2'){ score1=0; score2=1; } else { score1=0.5; score2=0.5; }
+                    const k=32;
+                    const new1 = Math.max(0, Math.round(p1.rating + k*(score1-expected1)));
+                    const new2 = Math.max(0, Math.round(p2.rating + k*(score2-expected2)));
+                    p1.rating = new1; p2.rating = new2;
+                    p1.lastDelta = new1 - before1;
+                    p2.lastDelta = new2 - before2;
+                    r.deltaP1 = new1 - before1;
+                    r.deltaP2 = new2 - before2;
+                    r.applied = true;
+                });
+                renderPlayersTable();
+                renderResultsTable();
+                alert('Applied '+pending.length+' result(s). Ratings updated.');
+        }
+
+        /******************************
+         * Modal Utility
+         ******************************/
+        function showModal({title, body, onConfirm, confirmText='Save', confirmClass='', cancelText='Cancel'}){
+            const root=document.getElementById('modalRoot');
+            const backdrop=document.createElement('div'); backdrop.className='modal-backdrop';
+            const modal=document.createElement('div'); modal.className='modal';
+            modal.innerHTML = `<header>${title}</header><div class="content">${body}</div>`+
+                `<div class="actions">`+
+                `<button onclick="closeModal(this)" class="outline">${cancelText}</button>`+
+                `<button class="${confirmClass}" onclick="confirmModal(this)">${confirmText}</button>`+
+                `</div>`;
+            backdrop.appendChild(modal);
+            root.appendChild(backdrop);
+            backdrop.querySelector('input,select,textarea');
+            backdrop._onConfirm = onConfirm;
+        }
+        function closeModal(btn){ const backdrop=btn.closest('.modal-backdrop'); backdrop.remove(); }
+        function confirmModal(btn){ const backdrop=btn.closest('.modal-backdrop'); if(!backdrop) return; const ok = backdrop._onConfirm? backdrop._onConfirm(): true; if(ok!==false) backdrop.remove(); }
+
+        /******************************
+         * Helpers
+         ******************************/
+        function escapeHtml(str){ return (str||'').replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+        function triggerDownload(content, filename){
+            const blob=new Blob([content],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob);
+            const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},1000);
+        }
+
+        // Initial render
+        renderPlayersTable(); updateNavEnablement();
+    </script>
+</body>
+</html>
