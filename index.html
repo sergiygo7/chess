@@ -336,8 +336,11 @@
             <div class="actions">
                 <button onclick="generatePairings()" class="primary">Generate Pairings</button>
                 <button onclick="clearManualPairings()" class="danger">Clear All Manual Pairings</button>
+                <button onclick="triggerLoadManualPairings()">Load Manual Pairings</button>
+                <button onclick="downloadManualPairings()">Download Manual Pairings</button>
                 <button onclick="downloadPairingsDetailed()">Download Detailed CSV</button>
                 <button onclick="downloadPairingsPublic()">Download Public CSV</button>
+                <input id="manualPairingsFileInput" type="file" accept=".json" class="hidden" onchange="handleManualPairingsFile(event)" />
             </div>
 
             <!-- Pairing Algorithm Configuration -->
@@ -404,7 +407,10 @@
             <div class="actions">
                 <button onclick="openResultModal()">Add Result</button>
                 <button onclick="recalculateRatings()" class="primary">Recalculate Ratings</button>
+                <button onclick="triggerLoadGameResults()">Load Game Results</button>
+                <button onclick="downloadGameResults()">Download Game Results</button>
                 <button onclick="downloadPlayersCSV()">Download Updated Players (CSV)</button>
+                <input id="gameResultsFileInput" type="file" accept=".json" class="hidden" onchange="handleGameResultsFile(event)" />
             </div>
             <div id="resultsTableWrapper"></div>
         </div>
@@ -866,6 +872,73 @@
             triggerDownload(csv,'pairings_public.csv');
         }
 
+        // Manual Pairings Load/Save Functions
+        function triggerLoadManualPairings(){
+            document.getElementById('manualPairingsFileInput').click();
+        }
+
+        function handleManualPairingsFile(e){
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = evt => {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    if(!Array.isArray(data)) {
+                        alert('Invalid manual pairings file format');
+                        return;
+                    }
+                    // Validate data structure
+                    const isValid = data.every(mp =>
+                        typeof mp.isManual === 'boolean' &&
+                        (mp.p1Id === null || typeof mp.p1Id === 'number') &&
+                        (mp.p2Id === null || typeof mp.p2Id === 'number') &&
+                        (mp.tableNumber === null || typeof mp.tableNumber === 'number')
+                    );
+                    if(!isValid) {
+                        alert('Invalid manual pairings data structure');
+                        return;
+                    }
+
+                    // Check if referenced players exist
+                    const playerIds = new Set(players.map(p => p.id));
+                    const missingPlayers = data.filter(mp =>
+                        (mp.p1Id !== null && !playerIds.has(mp.p1Id)) ||
+                        (mp.p2Id !== null && !playerIds.has(mp.p2Id))
+                    );
+                    if(missingPlayers.length > 0) {
+                        if(!confirm(`Some players in the pairings file don't exist in current players list. Load anyway? (Missing players will be skipped)`)) {
+                            return;
+                        }
+                        // Filter out pairings with missing players
+                        manualPairings = data.filter(mp =>
+                            (mp.p1Id === null || playerIds.has(mp.p1Id)) &&
+                            (mp.p2Id === null || playerIds.has(mp.p2Id))
+                        );
+                    } else {
+                        manualPairings = data;
+                    }
+
+                    renderManualPairsList();
+                    generatePairings();
+                    alert('Manual pairings loaded successfully');
+                } catch(err) {
+                    alert('Error reading manual pairings file: ' + err.message);
+                }
+                e.target.value = ''; // Allow selecting same file again
+            };
+            reader.readAsText(file);
+        }
+
+        function downloadManualPairings(){
+            if(!manualPairings.length) {
+                alert('No manual pairings to download');
+                return;
+            }
+            const data = JSON.stringify(manualPairings, null, 2);
+            triggerDownload(data, 'manual_pairings.json');
+        }
+
         /******************************
          * Results Section
          ******************************/
@@ -1000,6 +1073,76 @@
                 alert('Applied '+pending.length+' result(s). Ratings updated.');
         }
 
+        // Game Results Load/Save Functions
+        function triggerLoadGameResults(){
+            document.getElementById('gameResultsFileInput').click();
+        }
+
+        function handleGameResultsFile(e){
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = evt => {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    if(!Array.isArray(data)) {
+                        alert('Invalid game results file format');
+                        return;
+                    }
+                    // Validate data structure
+                    const isValid = data.every(r =>
+                        typeof r.id === 'number' &&
+                        typeof r.p1Id === 'number' &&
+                        typeof r.p2Id === 'number' &&
+                        ['P1', 'P2', 'DRAW'].includes(r.outcome) &&
+                        typeof r.applied === 'boolean'
+                    );
+                    if(!isValid) {
+                        alert('Invalid game results data structure');
+                        return;
+                    }
+
+                    // Check if referenced players exist
+                    const playerIds = new Set(players.map(p => p.id));
+                    const missingPlayers = data.filter(r =>
+                        !playerIds.has(r.p1Id) || !playerIds.has(r.p2Id)
+                    );
+                    if(missingPlayers.length > 0) {
+                        if(!confirm(`Some players in the results file don't exist in current players list. Load anyway? (Results with missing players will be skipped)`)) {
+                            return;
+                        }
+                        // Filter out results with missing players
+                        results = data.filter(r =>
+                            playerIds.has(r.p1Id) && playerIds.has(r.p2Id)
+                        );
+                    } else {
+                        results = data;
+                    }
+
+                    // Update nextResultId to avoid conflicts
+                    if(results.length > 0) {
+                        nextResultId = Math.max(...results.map(r => r.id)) + 1;
+                    }
+
+                    renderResultsTable();
+                    alert('Game results loaded successfully');
+                } catch(err) {
+                    alert('Error reading game results file: ' + err.message);
+                }
+                e.target.value = ''; // Allow selecting same file again
+            };
+            reader.readAsText(file);
+        }
+
+        function downloadGameResults(){
+            if(!results.length) {
+                alert('No game results to download');
+                return;
+            }
+            const data = JSON.stringify(results, null, 2);
+            triggerDownload(data, 'game_results.json');
+        }
+
         /******************************
          * Modal Utility
          ******************************/
@@ -1066,7 +1209,8 @@
          ******************************/
         function escapeHtml(str){ return (str||'').replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
         function triggerDownload(content, filename){
-            const blob=new Blob([content],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob);
+            const mimeType = filename.endsWith('.json') ? 'application/json;charset=utf-8;' : 'text/csv;charset=utf-8;';
+            const blob=new Blob([content],{type:mimeType}); const url=URL.createObjectURL(blob);
             const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},1000);
         }
 
