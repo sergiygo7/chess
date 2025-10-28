@@ -879,7 +879,7 @@
                     const d2 = r.applied ? (typeof r.deltaP2==='number'? r.deltaP2 : 0) : 0;
                     const fmtPlayer = (pl,delta) => {
                         if(!pl) return '?';
-                        const base = `${escapeHtml(pl.name)} (${pl.rating}`;
+                        const base = `#${pl.id} - ${escapeHtml(pl.name)} (${pl.rating}`;
                         if(!r.applied) return base + ')';
                         if(delta>0) return base + `) <span class=\"rate-up\" title=\"+${delta}\">▲ (+${delta})</span>`;
                         if(delta<0) return base + `) <span class=\"rate-down\" title=\"${delta}\">▼ (${delta})</span>`;
@@ -949,25 +949,52 @@
         function recalculateRatings(){
                 const pending = results.filter(r=>!r.applied);
                 if(!pending.length){ alert('No pending results to apply.'); return; }
+
+                // Store original ratings to calculate total deltas
+                const originalRatings = new Map();
+                players.forEach(p => {
+                    originalRatings.set(p.id, p.rating);
+                });
+
+                // Process games sequentially, updating ratings after each game
                 pending.forEach(r=>{
                     const p1 = players.find(p=>p.id===r.p1Id);
                     const p2 = players.find(p=>p.id===r.p2Id);
                     if(!p1||!p2) return;
-                    const before1 = p1.rating; const before2 = p2.rating;
+
+                    // Use current ratings (which may have been updated by previous games)
+                    const before1 = p1.rating;
+                    const before2 = p2.rating;
                     const expected1 = 1/(1+Math.pow(10,(p2.rating - p1.rating)/400));
                     const expected2 = 1/(1+Math.pow(10,(p1.rating - p2.rating)/400));
+
                     let score1, score2;
-                    if(r.outcome==='P1'){ score1=1; score2=0; } else if(r.outcome==='P2'){ score1=0; score2=1; } else { score1=0.5; score2=0.5; }
+                    if(r.outcome==='P1'){ score1=1; score2=0; }
+                    else if(r.outcome==='P2'){ score1=0; score2=1; }
+                    else { score1=0.5; score2=0.5; }
+
                     const k=32;
                     const new1 = Math.max(0, Math.round(p1.rating + k*(score1-expected1)));
                     const new2 = Math.max(0, Math.round(p2.rating + k*(score2-expected2)));
-                    p1.rating = new1; p2.rating = new2;
-                    p1.lastDelta = new1 - before1;
-                    p2.lastDelta = new2 - before2;
+
+                    // Update player ratings immediately for next calculation
+                    p1.rating = new1;
+                    p2.rating = new2;
+
+                    // Store individual game deltas
                     r.deltaP1 = new1 - before1;
                     r.deltaP2 = new2 - before2;
                     r.applied = true;
                 });
+
+                // Calculate total deltas from original ratings and update lastDelta for display
+                players.forEach(p => {
+                    const originalRating = originalRatings.get(p.id);
+                    if (originalRating !== undefined) {
+                        p.lastDelta = p.rating - originalRating;
+                    }
+                });
+
                 renderPlayersTable();
                 renderResultsTable();
                 alert('Applied '+pending.length+' result(s). Ratings updated.');
