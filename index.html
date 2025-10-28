@@ -912,8 +912,8 @@
             });
         }
         function resultForm(r={}){
-            const playerOptions = players.map(p=> `<option value="${p.id}" ${r.p1Id===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('');
-            const playerOptions2 = players.map(p=> `<option value="${p.id}" ${r.p2Id===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('');
+            const playerOptions = players.map(p=> `<option value="${p.id}" ${r.p1Id===p.id?'selected':''}>#${p.id} - ${escapeHtml(p.name)} (${p.category}, ${p.rating})</option>`).join('');
+            const playerOptions2 = players.map(p=> `<option value="${p.id}" ${r.p2Id===p.id?'selected':''}>#${p.id} - ${escapeHtml(p.name)} (${p.category}, ${p.rating})</option>`).join('');
             return `<form id="resultForm">`+
                 `<label>Player 1</label><select name="p1">${playerOptions}</select>`+
                 `<label>Player 2</label><select name="p2">${playerOptions2}</select>`+
