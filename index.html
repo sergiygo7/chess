@@ -574,7 +574,7 @@
         function downloadPlayersCSV(){
             let csv = CSV_HEADERS.join(',')+'\n';
             players.forEach(p=>{
-                csv += `${p.id},${csvEscape(p.name)},${p.category},${p.rating},${p.presence?'yes':'no'},${csvEscape(p.teacher)},${csvEscape(p.grade)}\n`;
+                csv += `${p.id},${p.name||''},${p.category},${p.rating},${p.presence?'yes':'no'},${p.teacher||''},${p.grade||''}\n`;
             });
             triggerDownload(csv,'players.csv');
         }
@@ -590,7 +590,7 @@
             const noOpt = document.createElement('option'); noOpt.value='NO_PARTNER'; noOpt.textContent='(No partner)';
             sel1.appendChild(noOpt.cloneNode(true)); sel2.appendChild(noOpt.cloneNode(true));
             players.filter(p=>p.presence).forEach(p=>{
-                const opt=document.createElement('option'); opt.value=p.id; opt.textContent=`${p.name} (${p.category}, ${p.rating})`; sel1.appendChild(opt.cloneNode(true)); sel2.appendChild(opt); });
+                const opt=document.createElement('option'); opt.value=p.id; opt.textContent=`#${p.id} - ${p.name} (${p.category}, ${p.rating})`; sel1.appendChild(opt.cloneNode(true)); sel2.appendChild(opt); });
         }
         function addManualPairing(){
             const tableRaw = document.getElementById('manualTableInput').value.trim();
@@ -799,10 +799,10 @@
                 const p2 = p.p2Id? players.find(pl=>pl.id===p.p2Id): null;
                 html += `<tr>`+
                     `<td>${p.displayTableNumber || p.tableNumber}</td>`+
-                    `<td>${p1? escapeHtml(p1.name): '<span class="no-partner">(No partner)</span>'}</td>`+
+                    `<td>${p1? `#${p1.id} - ${escapeHtml(p1.name)}`: '<span class="no-partner">(No partner)</span>'}</td>`+
                     `<td class="mobile-hide">${p1? p1.category:''}</td>`+
                     `<td class="mobile-hide">${p1? p1.rating:''}</td>`+
-                    `<td>${p2? escapeHtml(p2.name): '<span class="no-partner">(No partner)</span>'}</td>`+
+                    `<td>${p2? `#${p2.id} - ${escapeHtml(p2.name)}`: '<span class="no-partner">(No partner)</span>'}</td>`+
                     `<td class="mobile-hide">${p2? p2.category:''}</td>`+
                     `<td class="mobile-hide">${p2? p2.rating:''}</td>`+
                     `<td><span class="tag ${p.isManual?'manual':'auto'}">${p.isManual?'MANUAL':'AUTO'}</span></td>`+
@@ -838,7 +838,7 @@
             absentPlayers.forEach(p=>{
                 html += `<tr style="opacity: 0.7;">`+
                     `<td class="mobile-hide">${p.id}</td>`+
-                    `<td>${escapeHtml(p.name)}</td>`+
+                    `<td>#${p.id} - ${escapeHtml(p.name)}</td>`+
                     `<td>${p.category}</td>`+
                     `<td class="mobile-hide">${p.rating}</td>`+
                     `<td class="mobile-hide">${escapeHtml(p.teacher)}</td>`+
