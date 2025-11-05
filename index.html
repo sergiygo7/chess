@@ -407,10 +407,17 @@
             <div class="actions">
                 <button onclick="openResultModal()">Add Result</button>
                 <button onclick="recalculateRatings()" class="primary">Recalculate Ratings</button>
+                <button onclick="openPlayerReportModal()">Generate Report</button>
                 <button onclick="triggerLoadGameResults()">Load Game Results</button>
                 <button onclick="downloadGameResults()">Download Game Results</button>
                 <button onclick="downloadPlayersCSV()">Download Updated Players (CSV)</button>
                 <input id="gameResultsFileInput" type="file" accept=".json" class="hidden" onchange="handleGameResultsFile(event)" />
+            </div>
+            <div style="margin-bottom:16px;">
+                <label for="resultsFilter" style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Filter by Player Name:</label>
+                <input type="text" id="resultsFilter" placeholder="Type to filter results (supports wildcards * and ?)"
+                       style="width:100%; max-width:500px; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius); font-size:.85rem;"
+                       oninput="filterResults(this.value)" />
             </div>
             <div id="resultsTableWrapper"></div>
         </div>
@@ -942,11 +949,30 @@
         /******************************
          * Results Section
          ******************************/
-        function renderResultsTable(){
+        function renderResultsTable(filterText = ''){
             const wrapper = document.getElementById('resultsTableWrapper');
             if(!results.length){ wrapper.innerHTML='<p class="muted">No results recorded yet.</p>'; return; }
-                let html='<table><thead><tr><th class="mobile-hide">ID</th><th>Player 1</th><th>Player 2</th><th>Outcome</th><th class="mobile-hide">Status</th><th>Actions</th></tr></thead><tbody>';
-            results.forEach(r=>{
+
+            // Filter results by player names
+            let filteredResults = results;
+            if(filterText.trim()) {
+                const pattern = wildcardToRegex(filterText.trim());
+                filteredResults = results.filter(r => {
+                    const p1 = players.find(p=>p.id===r.p1Id);
+                    const p2 = players.find(p=>p.id===r.p2Id);
+                    const p1Name = p1 ? p1.name.toLowerCase() : '';
+                    const p2Name = p2 ? p2.name.toLowerCase() : '';
+                    return pattern.test(p1Name) || pattern.test(p2Name);
+                });
+            }
+
+            if(!filteredResults.length){
+                wrapper.innerHTML='<p class="muted">No results match the filter.</p>';
+                return;
+            }
+
+            let html='<table><thead><tr><th class="mobile-hide">ID</th><th>Player 1</th><th>Player 2</th><th>Outcome</th><th class="mobile-hide">Status</th><th>Actions</th></tr></thead><tbody>';
+            filteredResults.forEach(r=>{
                 const p1 = players.find(p=>p.id===r.p1Id); const p2 = players.find(p=>p.id===r.p2Id);
                     const d1 = r.applied ? (typeof r.deltaP1==='number'? r.deltaP1 : 0) : 0;
                     const d2 = r.applied ? (typeof r.deltaP2==='number'? r.deltaP2 : 0) : 0;
@@ -970,6 +996,19 @@
             html+='</tbody></table>';
             wrapper.innerHTML=html;
         }
+
+        function filterResults(filterText) {
+            renderResultsTable(filterText);
+        }
+
+        function wildcardToRegex(pattern) {
+            // Escape special regex characters except * and ?
+            const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+            // Convert wildcards: * matches any characters, ? matches single character
+            const regexPattern = escaped.replace(/\*/g, '.*').replace(/\?/g, '.');
+            return new RegExp(regexPattern, 'i'); // case-insensitive
+        }
+
         function openResultModal(){
             if(players.length<2){ alert('Need at least 2 players'); return; }
             showModal({
@@ -1081,6 +1120,32 @@
         function handleGameResultsFile(e){
             const file = e.target.files[0];
             if(!file) return;
+
+            // Check if there are existing results
+            if(results.length > 0) {
+                showModal({
+                    title: 'Load Game Results',
+                    body: `<p>You have ${results.length} existing game result(s).</p><p>How would you like to load the new results?</p>`,
+                    confirmText: 'Append',
+                    cancelText: 'Override',
+                    onConfirm: () => {
+                        loadGameResultsFromFile(file, true); // true = append
+                        return true;
+                    },
+                    onCancel: () => {
+                        loadGameResultsFromFile(file, false); // false = override
+                    }
+                });
+                e.target.value = ''; // Allow selecting same file again
+                return;
+            }
+
+            // No existing results, just load
+            loadGameResultsFromFile(file, false);
+            e.target.value = ''; // Allow selecting same file again
+        }
+
+        function loadGameResultsFromFile(file, append) {
             const reader = new FileReader();
             reader.onload = evt => {
                 try {
@@ -1107,29 +1172,49 @@
                     const missingPlayers = data.filter(r =>
                         !playerIds.has(r.p1Id) || !playerIds.has(r.p2Id)
                     );
+
+                    let validResults = data;
                     if(missingPlayers.length > 0) {
                         if(!confirm(`Some players in the results file don't exist in current players list. Load anyway? (Results with missing players will be skipped)`)) {
                             return;
                         }
                         // Filter out results with missing players
-                        results = data.filter(r =>
+                        validResults = data.filter(r =>
                             playerIds.has(r.p1Id) && playerIds.has(r.p2Id)
                         );
+                    }
+
+                    if(append) {
+                        // Append mode: adjust IDs to avoid conflicts
+                        const idOffset = nextResultId;
+                        const appendedResults = validResults.map(r => ({
+                            ...r,
+                            id: r.id + idOffset - 1
+                        }));
+                        results = [...results, ...appendedResults];
+
+                        // Update nextResultId
+                        if(results.length > 0) {
+                            nextResultId = Math.max(...results.map(r => r.id)) + 1;
+                        }
+
+                        renderResultsTable();
+                        alert(`Successfully appended ${appendedResults.length} game result(s). Total: ${results.length}`);
                     } else {
-                        results = data;
-                    }
+                        // Override mode: replace all results
+                        results = validResults;
 
-                    // Update nextResultId to avoid conflicts
-                    if(results.length > 0) {
-                        nextResultId = Math.max(...results.map(r => r.id)) + 1;
-                    }
+                        // Update nextResultId
+                        if(results.length > 0) {
+                            nextResultId = Math.max(...results.map(r => r.id)) + 1;
+                        }
 
-                    renderResultsTable();
-                    alert('Game results loaded successfully');
+                        renderResultsTable();
+                        alert('Game results loaded successfully');
+                    }
                 } catch(err) {
                     alert('Error reading game results file: ' + err.message);
                 }
-                e.target.value = ''; // Allow selecting same file again
             };
             reader.readAsText(file);
         }
@@ -1141,6 +1226,118 @@
             }
             const data = JSON.stringify(results, null, 2);
             triggerDownload(data, 'game_results.json');
+        }
+
+        /******************************
+         * Player Report Generation
+         ******************************/
+        function openPlayerReportModal(){
+            if(!players.length){ alert('No players available'); return; }
+            if(!results.length){ alert('No game results to report'); return; }
+
+            showModal({
+                title:'Generate Player Report',
+                body: playerReportForm(),
+                confirmText:'Generate',
+                onConfirm: ()=>{
+                    const form = document.getElementById('playerReportForm');
+                    const playerId = parseInt(form.playerId.value);
+                    if(!playerId){ alert('Please select a player'); return false; }
+                    generatePlayerReport(playerId);
+                    return true;
+                }
+            });
+        }
+
+        function playerReportForm(){
+            const playerOptions = players.map(p=> `<option value="${p.id}">#${p.id} - ${escapeHtml(p.name)} (${p.category}, ${p.rating})</option>`).join('');
+            return `<form id="playerReportForm">`+
+                `<label>Select Player</label>`+
+                `<select name="playerId" required>`+
+                    `<option value="">-- Choose a player --</option>`+
+                    playerOptions+
+                `</select>`+
+            `</form>`;
+        }
+
+        function generatePlayerReport(playerId){
+            const player = players.find(p=>p.id===playerId);
+            if(!player){ alert('Player not found'); return; }
+
+            // Find all games for this player
+            const playerGames = results.filter(r => r.p1Id === playerId || r.p2Id === playerId);
+
+            if(!playerGames.length){
+                alert(`No games found for ${player.name}`);
+                return;
+            }
+
+            // Calculate statistics
+            let wins = 0, losses = 0, draws = 0;
+            let gamesDetails = [];
+            let totalRatingChange = 0;
+
+            playerGames.forEach(r => {
+                const isPlayer1 = r.p1Id === playerId;
+                const opponent = isPlayer1 ? players.find(p=>p.id===r.p2Id) : players.find(p=>p.id===r.p1Id);
+                const opponentName = opponent ? opponent.name : 'Unknown';
+
+                let result = '';
+                let ratingChange = 0;
+
+                if(r.outcome === 'DRAW'){
+                    draws++;
+                    result = 'Drew';
+                } else if((r.outcome === 'P1' && isPlayer1) || (r.outcome === 'P2' && !isPlayer1)){
+                    wins++;
+                    result = 'Won';
+                } else {
+                    losses++;
+                    result = 'Lost';
+                }
+
+                // Get rating change if applied
+                if(r.applied){
+                    ratingChange = isPlayer1 ? r.deltaP1 : r.deltaP2;
+                    totalRatingChange += ratingChange;
+                }
+
+                const ratingChangeStr = r.applied ? (ratingChange > 0 ? ` (+${ratingChange})` : ` (${ratingChange})`) : '';
+                gamesDetails.push(`  Game #${r.id}: ${result} against ${opponentName}${ratingChangeStr}`);
+            });
+
+            // Build report
+            let report = `PLAYER PERFORMANCE REPORT\n`;
+            report += `${'='.repeat(60)}\n\n`;
+            report += `Player: ${player.name} (#${player.id})\n`;
+            report += `Category: ${player.category}\n`;
+            report += `Current Rating: ${player.rating}\n`;
+            report += `\n`;
+            report += `SUMMARY\n`;
+            report += `${'-'.repeat(60)}\n`;
+            report += `Total Games Played: ${playerGames.length}\n`;
+            report += `  Wins: ${wins}\n`;
+            report += `  Losses: ${losses}\n`;
+            report += `  Draws: ${draws}\n`;
+
+            if(totalRatingChange !== 0){
+                report += `\nTotal Rating Change: ${totalRatingChange > 0 ? '+' : ''}${totalRatingChange} points\n`;
+            }
+
+            // Calculate win percentage
+            const winPercentage = playerGames.length > 0 ? ((wins + draws * 0.5) / playerGames.length * 100).toFixed(1) : 0;
+            report += `Win Percentage: ${winPercentage}%\n`;
+
+            report += `\n`;
+            report += `GAME DETAILS\n`;
+            report += `${'-'.repeat(60)}\n`;
+            report += gamesDetails.join('\n');
+            report += `\n\n`;
+            report += `Report generated: ${new Date().toLocaleString()}\n`;
+
+            // Download report as text file
+            const filename = `player_report_${player.name.replace(/\s+/g, '_')}_${Date.now()}.txt`;
+            triggerDownload(report, filename);
         }
 
         /******************************
