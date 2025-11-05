@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <title>Chess Tournament Manager</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --bg: #f8f9fb;
@@ -317,16 +318,17 @@
         <div id="navPlayers" class="nav-item active" onclick="navigate('players')"><span>Players</span></div>
         <div id="navPairing" class="nav-item disabled" onclick="navigate('pairing')"><span>Pairing</span></div>
         <div id="navResults" class="nav-item disabled" onclick="navigate('results')"><span>Game Result</span></div>
+        <div id="navVisualization" class="nav-item disabled" onclick="navigate('visualization')"><span>Visualization</span></div>
         <div class="version">v0.1 SPA</div>
     </aside>
     <main class="main">
         <div id="sectionPlayers" class="section-view">
             <h2>Players</h2>
             <div class="actions">
-                <button class="primary" onclick="triggerLoadPlayers()">Load Players (CSV)</button>
+                <button class="primary" onclick="triggerLoadPlayers()">Load Players (CSV/JSON)</button>
                 <button onclick="openPlayerModal()">Add New Player</button>
                 <button onclick="downloadPlayersCSV()">Download Players as CSV</button>
-                <input id="playersFileInput" type="file" accept=".csv" class="hidden" onchange="handlePlayersFile(event)" />
+                <input id="playersFileInput" type="file" accept=".csv,.json" class="hidden" onchange="handlePlayersFile(event)" />
             </div>
             <div id="playersTableWrapper"></div>
         </div>
@@ -411,6 +413,7 @@
                 <button onclick="triggerLoadGameResults()">Load Game Results</button>
                 <button onclick="downloadGameResults()">Download Game Results</button>
                 <button onclick="downloadPlayersCSV()">Download Updated Players (CSV)</button>
+                <button onclick="downloadPlayersJSON()">Download Updated Players (JSON)</button>
                 <input id="gameResultsFileInput" type="file" accept=".json" class="hidden" onchange="handleGameResultsFile(event)" />
             </div>
             <div style="margin-bottom:16px;">
@@ -420,6 +423,20 @@
                        oninput="filterResults(this.value)" />
             </div>
             <div id="resultsTableWrapper"></div>
+        </div>
+
+        <div id="sectionVisualization" class="section-view hidden">
+            <h2>Visualization</h2>
+            <div class="actions">
+                <label for="visualizationPlayerSelect" style="font-size:.85rem; font-weight:600; margin-right:8px;">Select Player:</label>
+                <select id="visualizationPlayerSelect" onchange="showPlayerVisualization()" style="padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); font-size:.85rem; min-width:250px;">
+                    <option value="">-- Select a player --</option>
+                </select>
+            </div>
+            <div id="playerStatisticsWrapper" style="margin-top:20px;"></div>
+            <div id="ratingChartWrapper" style="margin-top:30px;">
+                <canvas id="ratingChart" style="max-width:900px; max-height:400px;"></canvas>
+            </div>
         </div>
     </main>
 
@@ -446,7 +463,7 @@
         function capitalize(s){return s.charAt(0).toUpperCase()+s.slice(1);}
         function updateNavEnablement(){
             const enable = players.length >= 2;
-            ['navPairing','navResults'].forEach(id => {
+            ['navPairing','navResults','navVisualization'].forEach(id => {
                 const el = document.getElementById(id);
                 if (enable) el.classList.remove('disabled'); else el.classList.add('disabled');
             });
@@ -466,7 +483,12 @@
                 const reader = new FileReader();
                 reader.onload = evt => {
                     const text = evt.target.result.trim();
-                    importPlayersFromCSV(text);
+                    // Detect JSON vs CSV by file extension or content
+                    if(file.name.endsWith('.json') || text.startsWith('{')){
+                        importPlayersFromJSON(text);
+                    } else {
+                        importPlayersFromCSV(text);
+                    }
                     // allow selecting same file again
                     e.target.value = '';
                 };
@@ -508,10 +530,66 @@
                 const presence = !(presenceRaw==='n'||presenceRaw==='no'||presenceRaw==='not'||presenceRaw==='false');
                 const teacher = parts[idx('teacher name')]||'';
                 const grade = parts[idx('class')]||'';
-                 players.push({id,name,category,rating,presence,teacher,grade,lastDelta:0});
+
+                // Set initialRating based on category (CSV doesn't have initialRating field)
+                const initialRating = category === 'Advanced' ? 1000 : category === 'Intermediate' ? 600 : 200;
+
+                players.push({
+                    id,
+                    name,
+                    category,
+                    rating: rating || initialRating,
+                    initialRating: initialRating,
+                    presence,
+                    teacher,
+                    grade,
+                    lastDelta: 0,
+                    statistics: null,
+                    history: []
+                });
             });
             renderPlayersTable();
             updateNavEnablement();
+        }
+        function importPlayersFromJSON(text){
+            try {
+                const data = JSON.parse(text);
+                // Support both direct array and {players: [...]} structure
+                const playerArray = Array.isArray(data) ? data : data.players;
+                if(!playerArray || !playerArray.length){
+                    alert('JSON file has no players data');
+                    return;
+                }
+                playerArray.forEach(p=>{
+                    const id = p.id || nextPlayerId++;
+                    if(id >= nextPlayerId) nextPlayerId = id+1;
+
+                    const category = p.category || 'Beginner';
+                    // Use initialRating from JSON if available, otherwise calculate from category
+                    const defaultInitialRating = category === 'Advanced' ? 1000 : category === 'Intermediate' ? 600 : 200;
+                    const initialRating = p.initialRating !== undefined ? p.initialRating : defaultInitialRating;
+
+                    // Map JSON structure to internal player object
+                    players.push({
+                        id: id,
+                        name: p.name || 'Unnamed',
+                        category: category,
+                        rating: p.currentRating || p.rating || initialRating,
+                        initialRating: initialRating,  // Preserve from JSON or use default
+                        presence: p.presence !== undefined ? p.presence : true,
+                        teacher: p.teacher !== undefined ? String(p.teacher) : '',
+                        grade: p.grade !== undefined ? String(p.grade) : '',
+                        lastDelta: 0,
+                        // Store statistics and history for later use
+                        statistics: p.statistics || null,
+                        history: p.history || []
+                    });
+                });
+                renderPlayersTable();
+                updateNavEnablement();
+            } catch(e) {
+                alert('Error parsing JSON file: ' + e.message);
+            }
         }
         function renderPlayersTable(){
             const wrapper = document.getElementById('playersTableWrapper');
@@ -550,9 +628,24 @@
                     const grade = form.grade.value.trim();
                     if(!name){alert('Name required');return false;}
                     if(isEdit){
+                        // When editing, never change initialRating
                         player.name=name; player.category=category; player.rating=rating; player.presence=presence; player.teacher=teacher; player.grade=grade;
                     } else {
-                        players.push({id: nextPlayerId++, name, category, rating, presence, teacher, grade, lastDelta:0});
+                        // When creating new player, set initialRating based on category
+                        const initialRating = category === 'Advanced' ? 1000 : category === 'Intermediate' ? 600 : 200;
+                        players.push({
+                            id: nextPlayerId++,
+                            name,
+                            category,
+                            rating: rating || initialRating,
+                            initialRating: initialRating,
+                            presence,
+                            teacher,
+                            grade,
+                            lastDelta: 0,
+                            statistics: null,
+                            history: []
+                        });
                     }
                     renderPlayersTable(); updateNavEnablement(); return true;
                 }
@@ -1128,6 +1221,9 @@
                     if (originalRating !== undefined) {
                         p.lastDelta = p.rating - originalRating;
                     }
+
+                    // Update player statistics in memory
+                    p.statistics = calculatePlayerStatistics(p.id);
                 });
 
                 renderPlayersTable();
@@ -1501,21 +1597,23 @@
         /******************************
          * Modal Utility
          ******************************/
-        function showModal({title, body, onConfirm, confirmText='Save', confirmClass='', cancelText='Cancel'}){
+        function showModal({title, body, onConfirm, onCancel, confirmText='Save', confirmClass='', cancelText='Cancel'}){
             const root=document.getElementById('modalRoot');
             const backdrop=document.createElement('div'); backdrop.className='modal-backdrop';
             const modal=document.createElement('div'); modal.className='modal';
             modal.innerHTML = `<header>${title}</header><div class="content">${body}</div>`+
                 `<div class="actions">`+
-                `<button onclick="closeModal(this)" class="outline">${cancelText}</button>`+
+                `<button onclick="cancelModal(this)" class="outline">${cancelText}</button>`+
                 `<button class="${confirmClass}" onclick="confirmModal(this)">${confirmText}</button>`+
                 `</div>`;
             backdrop.appendChild(modal);
             root.appendChild(backdrop);
             backdrop.querySelector('input,select,textarea');
             backdrop._onConfirm = onConfirm;
+            backdrop._onCancel = onCancel;
         }
         function closeModal(btn){ const backdrop=btn.closest('.modal-backdrop'); backdrop.remove(); }
+        function cancelModal(btn){ const backdrop=btn.closest('.modal-backdrop'); if(!backdrop) return; if(backdrop._onCancel) { backdrop._onCancel(); } backdrop.remove(); }
         function confirmModal(btn){ const backdrop=btn.closest('.modal-backdrop'); if(!backdrop) return; const ok = backdrop._onConfirm? backdrop._onConfirm(): true; if(ok!==false) backdrop.remove(); }
 
         /******************************
@@ -1539,6 +1637,7 @@
         function navigate(section) {
             if (section === 'pairing' && players.length < 2) return;
             if (section === 'results' && players.length < 2) return;
+            if (section === 'visualization' && players.length < 2) return;
 
             // Close mobile menu on navigation
             closeMobileMenu();
@@ -1557,6 +1656,9 @@
             if (section === 'players') {
                 renderPlayersTable();
             }
+            if (section === 'visualization') {
+                populateVisualizationPlayerSelect();
+            }
         }
 
         /******************************
@@ -1567,6 +1669,455 @@
             const mimeType = filename.endsWith('.json') ? 'application/json;charset=utf-8;' : 'text/csv;charset=utf-8;';
             const blob=new Blob([content],{type:mimeType}); const url=URL.createObjectURL(blob);
             const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},1000);
+        }
+
+        /******************************
+         * JSON Export with Statistics and History
+         ******************************/
+        function downloadPlayersJSON() {
+            if(!players.length) {
+                alert('No players to export');
+                return;
+            }
+
+            // Prompt for tournament date
+            showModal({
+                title: 'Enter Tournament Date',
+                body: `<form id="dateForm">
+                    <label>Tournament Date (YYYY-MM-DD)</label>
+                    <input name="tournamentDate" type="date" required value="${new Date().toISOString().split('T')[0]}" />
+                    <p style="font-size:0.75rem; color:#666; margin-top:8px;">
+                        If history exists for this date, it will be updated. Otherwise, a new entry will be added.
+                    </p>
+                </form>`,
+                onConfirm: () => {
+                    const form = document.getElementById('dateForm');
+                    const dateInput = form.tournamentDate.value.trim();
+                    if(!dateInput) {
+                        alert('Tournament date is required');
+                        return false;
+                    }
+
+                    // Validate date format
+                    if(!/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+                        alert('Date must be in YYYY-MM-DD format');
+                        return false;
+                    }
+
+                    // Generate and download JSON
+                    const json = generatePlayersJSON(dateInput);
+                    triggerDownload(json, 'players.json');
+                    return true;
+                }
+            });
+        }
+
+        function generatePlayersJSON(tournamentDate) {
+            // Calculate statistics for each player based on current results
+            const updatedPlayers = players.map(p => {
+                const stats = calculatePlayerStatistics(p.id);
+                const historyEntry = generateHistoryEntry(p.id, tournamentDate);
+
+                // Merge with existing history
+                let history = p.history || [];
+                const existingIndex = history.findIndex(h => h.date === tournamentDate);
+
+                if(existingIndex >= 0) {
+                    // Overwrite existing entry for this date
+                    history[existingIndex] = historyEntry;
+                } else {
+                    // Append new entry and sort by date
+                    history.push(historyEntry);
+                    history.sort((a, b) => a.date.localeCompare(b.date));
+                }
+
+                return {
+                    id: p.id,
+                    name: p.name,
+                    category: p.category,
+                    currentRating: p.rating,
+                    initialRating: p.initialRating || (p.category === 'Advanced' ? 1000 : p.category === 'Intermediate' ? 600 : 200),
+                    presence: p.presence,
+                    teacher: p.teacher,
+                    grade: p.grade,
+                    statistics: stats,
+                    history: history
+                };
+            });
+
+            // Count players by category
+            const categoryCounts = {
+                Advanced: updatedPlayers.filter(p => p.category === 'Advanced').length,
+                Intermediate: updatedPlayers.filter(p => p.category === 'Intermediate').length,
+                Beginner: updatedPlayers.filter(p => p.category === 'Beginner').length
+            };
+
+            const output = {
+                metadata: {
+                    version: "1.0",
+                    lastUpdated: new Date().toISOString(),
+                    totalPlayers: updatedPlayers.length,
+                    categories: categoryCounts
+                },
+                players: updatedPlayers
+            };
+
+            return JSON.stringify(output, null, 2);
+        }
+
+        function calculatePlayerStatistics(playerId) {
+            const player = players.find(p => p.id === playerId);
+            if(!player) return null;
+
+            // Get existing history
+            const history = player.history || [];
+
+            // Calculate cumulative statistics from history
+            let totalWins = 0, totalLosses = 0, totalDraws = 0;
+            let allRatings = [];
+
+            // Process historical data
+            history.forEach(h => {
+                totalWins += h.results?.wins || 0;
+                totalLosses += h.results?.losses || 0;
+                totalDraws += h.results?.draws || 0;
+
+                if(h.ratingBefore) allRatings.push(h.ratingBefore);
+                if(h.ratingAfter) allRatings.push(h.ratingAfter);
+            });
+
+            // Add current session results (not yet in history)
+            const currentResults = results.filter(r => r.applied && (r.p1Id === playerId || r.p2Id === playerId));
+            let currentWins = 0, currentLosses = 0, currentDraws = 0;
+            let currentRatingChange = 0;
+
+            currentResults.forEach(r => {
+                const isP1 = r.p1Id === playerId;
+                const ratingDelta = isP1 ? (r.deltaP1 || 0) : (r.deltaP2 || 0);
+
+                currentRatingChange += ratingDelta;
+
+                if(r.outcome === 'P1') {
+                    if(isP1) currentWins++; else currentLosses++;
+                } else if(r.outcome === 'P2') {
+                    if(isP1) currentLosses++; else currentWins++;
+                } else {
+                    currentDraws++;
+                }
+            });
+
+            // Combine totals
+            const wins = totalWins + currentWins;
+            const losses = totalLosses + currentLosses;
+            const draws = totalDraws + currentDraws;
+            const totalGames = wins + losses + draws;
+
+            // Calculate rating range from history + current rating
+            allRatings.push(player.rating);
+            const initialRating = player.statistics?.initialRating || (allRatings.length > 0 ? Math.min(...allRatings) : player.rating);
+
+            // Add initial rating to the ratings array if not already there
+            if(!allRatings.includes(initialRating)) {
+                allRatings.push(initialRating);
+            }
+
+            const highestRating = allRatings.length > 0 ? Math.max(...allRatings) : player.rating;
+            const lowestRating = allRatings.length > 0 ? Math.min(...allRatings) : player.rating;
+
+            // Calculate total rating change from initial to current
+            const totalRatingChange = player.rating - initialRating;
+
+            // Calculate current streak (only from current session results)
+            let currentStreak = { type: 'none', count: 0 };
+            if(currentResults.length > 0) {
+                const lastResult = currentResults[currentResults.length - 1];
+                const isP1 = lastResult.p1Id === playerId;
+                let lastOutcome = '';
+
+                if(lastResult.outcome === 'DRAW') {
+                    lastOutcome = 'draw';
+                } else if((lastResult.outcome === 'P1' && isP1) || (lastResult.outcome === 'P2' && !isP1)) {
+                    lastOutcome = 'win';
+                } else {
+                    lastOutcome = 'loss';
+                }
+
+                currentStreak = { type: lastOutcome, count: 1 };
+
+                // Count streak backwards
+                for(let i = currentResults.length - 2; i >= 0; i--) {
+                    const r = currentResults[i];
+                    const isP1Current = r.p1Id === playerId;
+                    let outcome = '';
+
+                    if(r.outcome === 'DRAW') {
+                        outcome = 'draw';
+                    } else if((r.outcome === 'P1' && isP1Current) || (r.outcome === 'P2' && !isP1Current)) {
+                        outcome = 'win';
+                    } else {
+                        outcome = 'loss';
+                    }
+
+                    if(outcome === lastOutcome) {
+                        currentStreak.count++;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            const winPercentage = totalGames > 0 ? Math.round((wins / totalGames) * 1000) / 10 : 0;
+
+            return {
+                totalGames,
+                wins,
+                losses,
+                draws,
+                winPercentage,
+                totalRatingChange,
+                highestRating,
+                lowestRating,
+                currentStreak
+            };
+        }
+
+        function generateHistoryEntry(playerId, tournamentDate) {
+            const playerResults = results.filter(r => r.applied && (r.p1Id === playerId || r.p2Id === playerId));
+            const player = players.find(p => p.id === playerId);
+
+            if(!player) return null;
+
+            let wins = 0, losses = 0, draws = 0;
+            let totalRatingChange = 0;
+            const opponents = [];
+
+            playerResults.forEach(r => {
+                const isP1 = r.p1Id === playerId;
+                const opponentId = isP1 ? r.p2Id : r.p1Id;
+                const opponent = players.find(p => p.id === opponentId);
+                const ratingDelta = isP1 ? (r.deltaP1 || 0) : (r.deltaP2 || 0);
+
+                totalRatingChange += ratingDelta;
+
+                let result = '';
+                if(r.outcome === 'P1') {
+                    if(isP1) { wins++; result = 'win'; }
+                    else { losses++; result = 'loss'; }
+                } else if(r.outcome === 'P2') {
+                    if(isP1) { losses++; result = 'loss'; }
+                    else { wins++; result = 'win'; }
+                } else {
+                    draws++;
+                    result = 'draw';
+                }
+
+                opponents.push({
+                    opponentId: opponentId,
+                    opponentName: opponent?.name || 'Unknown',
+                    result: result,
+                    ratingChange: ratingDelta
+                });
+            });
+
+            const gamesPlayed = wins + losses + draws;
+            const ratingBefore = player.statistics?.initialRating || (player.rating - totalRatingChange);
+            const ratingAfter = player.rating;
+
+            return {
+                date: tournamentDate,
+                ratingBefore: ratingBefore,
+                ratingAfter: ratingAfter,
+                ratingChange: totalRatingChange,
+                gamesPlayed: gamesPlayed,
+                results: { wins, losses, draws },
+                opponents: opponents
+            };
+        }
+
+        /******************************
+         * Visualization Section
+         ******************************/
+        let currentChart = null;
+
+        function populateVisualizationPlayerSelect() {
+            const select = document.getElementById('visualizationPlayerSelect');
+            select.innerHTML = '<option value="">-- Select a player --</option>';
+
+            players.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = `#${p.id} - ${p.name} (${p.category})`;
+                select.appendChild(option);
+            });
+        }
+
+        function showPlayerVisualization() {
+            const select = document.getElementById('visualizationPlayerSelect');
+            const playerId = parseInt(select.value);
+
+            if(!playerId) {
+                document.getElementById('playerStatisticsWrapper').innerHTML = '';
+                document.getElementById('ratingChartWrapper').innerHTML = '<canvas id="ratingChart" style="max-width:900px; max-height:400px;"></canvas>';
+                if(currentChart) {
+                    currentChart.destroy();
+                    currentChart = null;
+                }
+                return;
+            }
+
+            const player = players.find(p => p.id === playerId);
+            if(!player) return;
+
+            // Display statistics
+            displayPlayerStatistics(player);
+
+            // Display rating chart
+            displayRatingChart(player);
+        }
+
+        function displayPlayerStatistics(player) {
+            const wrapper = document.getElementById('playerStatisticsWrapper');
+            const stats = player.statistics || calculatePlayerStatistics(player.id);
+
+            let html = '<div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:20px; max-width:800px;">';
+            html += `<h3 style="margin:0 0 16px; font-size:1.2rem;">${escapeHtml(player.name)} - Statistics</h3>`;
+
+            html += '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:20px;">';
+
+            // Games Summary
+            html += '<div style="background:#f8f9fb; padding:12px; border-radius:4px;">';
+            html += '<div style="font-size:0.75rem; color:#666; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Total Games</div>';
+            html += `<div style="font-size:1.8rem; font-weight:700;">${stats.totalGames}</div>`;
+            html += '</div>';
+
+            // Win Percentage
+            html += '<div style="background:#f8f9fb; padding:12px; border-radius:4px;">';
+            html += '<div style="font-size:0.75rem; color:#666; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Win Rate</div>';
+            html += `<div style="font-size:1.8rem; font-weight:700; color:${stats.winPercentage >= 50 ? 'var(--success)' : 'var(--danger)'};">${stats.winPercentage}%</div>`;
+            html += '</div>';
+
+            // Rating Change
+            html += '<div style="background:#f8f9fb; padding:12px; border-radius:4px;">';
+            html += '<div style="font-size:0.75rem; color:#666; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Rating Change</div>';
+            html += `<div style="font-size:1.8rem; font-weight:700; color:${stats.totalRatingChange >= 0 ? 'var(--success)' : 'var(--danger)'};">${stats.totalRatingChange >= 0 ? '+' : ''}${stats.totalRatingChange}</div>`;
+            html += '</div>';
+
+            // Current Rating
+            html += '<div style="background:#f8f9fb; padding:12px; border-radius:4px;">';
+            html += '<div style="font-size:0.75rem; color:#666; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Current Rating</div>';
+            html += `<div style="font-size:1.8rem; font-weight:700;">${player.rating}</div>`;
+            html += '</div>';
+
+            html += '</div>'; // Close grid
+
+            // Detailed breakdown
+            html += '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">';
+
+            html += '<div>';
+            html += '<h4 style="margin:0 0 8px; font-size:0.9rem; color:#666;">Record</h4>';
+            html += `<div style="font-size:0.85rem;"><strong>Wins:</strong> ${stats.wins}</div>`;
+            html += `<div style="font-size:0.85rem;"><strong>Losses:</strong> ${stats.losses}</div>`;
+            html += `<div style="font-size:0.85rem;"><strong>Draws:</strong> ${stats.draws}</div>`;
+            html += '</div>';
+
+            html += '<div>';
+            html += '<h4 style="margin:0 0 8px; font-size:0.9rem; color:#666;">Rating Range</h4>';
+            html += `<div style="font-size:0.85rem;"><strong>Highest:</strong> ${stats.highestRating}</div>`;
+            html += `<div style="font-size:0.85rem;"><strong>Lowest:</strong> ${stats.lowestRating}</div>`;
+            html += `<div style="font-size:0.85rem;"><strong>Current Streak:</strong> ${stats.currentStreak.count} ${stats.currentStreak.type}${stats.currentStreak.count > 1 ? 's' : ''}</div>`;
+            html += '</div>';
+
+            html += '</div>'; // Close grid
+            html += '</div>'; // Close container
+
+            wrapper.innerHTML = html;
+        }
+
+        function displayRatingChart(player) {
+            const history = player.history || [];
+
+            if(history.length === 0) {
+                document.getElementById('ratingChartWrapper').innerHTML = '<p style="text-align:center; color:#666; padding:40px;">No rating history available for this player.</p>';
+                if(currentChart) {
+                    currentChart.destroy();
+                    currentChart = null;
+                }
+                return;
+            }
+
+            // Prepare chart data
+            const labels = history.map(h => h.date);
+            const ratingData = history.map(h => h.ratingAfter);
+
+            // Destroy previous chart if exists
+            if(currentChart) {
+                currentChart.destroy();
+            }
+
+            // Create canvas if needed
+            const wrapper = document.getElementById('ratingChartWrapper');
+            wrapper.innerHTML = '<canvas id="ratingChart" style="max-width:900px; max-height:400px;"></canvas>';
+
+            const ctx = document.getElementById('ratingChart').getContext('2d');
+
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Rating',
+                        data: ratingData,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `${player.name} - Rating History`,
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const index = context.dataIndex;
+                                    const historyEntry = history[index];
+                                    return [
+                                        `Games: ${historyEntry.gamesPlayed}`,
+                                        `W/L/D: ${historyEntry.results.wins}/${historyEntry.results.losses}/${historyEntry.results.draws}`,
+                                        `Change: ${historyEntry.ratingChange >= 0 ? '+' : ''}${historyEntry.ratingChange}`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Rating'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Tournament Date'
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // Initial render
