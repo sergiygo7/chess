@@ -1264,46 +1264,155 @@
                 confirmText:'Generate',
                 onConfirm: ()=>{
                     const form = document.getElementById('playerReportForm');
-                    const playerId = parseInt(form.playerId.value);
-                    if(!playerId){ alert('Please select a player'); return false; }
-                    generatePlayerReport(playerId);
+                    const checkboxes = form.querySelectorAll('input[name="playerIds"]:checked');
+                    const selectAll = form.querySelector('input[name="selectAll"]').checked;
+
+                    let selectedPlayerIds = [];
+
+                    if(selectAll){
+                        // Generate report for all players
+                        selectedPlayerIds = players.map(p => p.id);
+                    } else {
+                        // Get selected players from checkboxes
+                        selectedPlayerIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+                    }
+
+                    if(!selectedPlayerIds.length){
+                        alert('Please select at least one player');
+                        return false;
+                    }
+
+                    generateMultiPlayerReports(selectedPlayerIds);
                     return true;
                 }
             });
         }
 
         function playerReportForm(){
-            const playerOptions = players.map(p=> `<option value="${p.id}">#${p.id} - ${escapeHtml(p.name)} (${p.category}, ${p.rating})</option>`).join('');
-            return `<form id="playerReportForm">`+
-                `<label>Select Player</label>`+
-                `<select name="playerId" required>`+
-                    `<option value="">-- Choose a player --</option>`+
-                    playerOptions+
-                `</select>`+
-            `</form>`;
+            let html = `<form id="playerReportForm">`;
+            html += `<div style="margin-bottom:12px;">`;
+            html += `<label style="display:flex; align-items:center; gap:8px; font-weight:bold; cursor:pointer;">`;
+            html += `<input type="checkbox" name="selectAll" onchange="toggleAllPlayers(this)"> Select All Players`;
+            html += `</label>`;
+            html += `</div>`;
+            html += `<div style="max-height:300px; overflow-y:auto; border:1px solid var(--border); padding:8px; border-radius:4px;">`;
+
+            players.forEach(p => {
+                html += `<div style="margin-bottom:6px;">`;
+                html += `<label style="display:flex; align-items:center; gap:8px; cursor:pointer;">`;
+                html += `<input type="checkbox" name="playerIds" value="${p.id}" class="player-checkbox">`;
+                html += `#${p.id} - ${escapeHtml(p.name)} (${p.category}, ${p.rating})`;
+                html += `</label>`;
+                html += `</div>`;
+            });
+
+            html += `</div>`;
+            html += `</form>`;
+            return html;
         }
 
-        function generatePlayerReport(playerId){
+        function toggleAllPlayers(checkbox){
+            const form = document.getElementById('playerReportForm');
+            const playerCheckboxes = form.querySelectorAll('input[name="playerIds"]');
+            playerCheckboxes.forEach(cb => cb.checked = checkbox.checked);
+        }
+
+        function generateMultiPlayerReports(playerIds){
+            const allReportsData = [];
+            const combinedReportText = [];
+            const timestamp = getFormattedTimestamp();
+
+            // Generate reports for each selected player
+            playerIds.forEach((playerId, index) => {
+                const reportData = generateSinglePlayerReportData(playerId);
+                if(reportData){
+                    allReportsData.push(reportData);
+                    combinedReportText.push(reportData.reportText);
+                }
+            });
+
+            if(allReportsData.length === 0){
+                alert('No reports generated (no games found for selected players)');
+                return;
+            }
+
+            // Generate combined text file (single player or multiple)
+            let textReport;
+            let textFilename;
+
+            if(playerIds.length === 1){
+                // Single player - use their name in filename
+                textReport = combinedReportText[0];
+                textFilename = `player_report_${allReportsData[0].playerName.replace(/\s+/g, '_')}_${timestamp}.txt`;
+            } else {
+                // Multiple players - combine all reports
+                textReport = combinedReportText.join('\n\n' + '='.repeat(80) + '\n\n');
+                textFilename = `player_reports_${timestamp}.txt`;
+            }
+
+            triggerDownload(textReport, textFilename);
+
+            // Generate JSON file with all data
+            const jsonData = {
+                generatedAt: new Date().toISOString(),
+                timestamp: timestamp,
+                reportCount: allReportsData.length,
+                reports: allReportsData.map(data => ({
+                    playerId: data.playerId,
+                    playerName: data.playerName,
+                    category: data.category,
+                    currentRating: data.currentRating,
+                    statistics: {
+                        totalGames: data.totalGames,
+                        wins: data.wins,
+                        losses: data.losses,
+                        draws: data.draws,
+                        winPercentage: data.winPercentage,
+                        totalRatingChange: data.totalRatingChange
+                    },
+                    games: data.games
+                }))
+            };
+
+            const jsonFilename = `player_reports_data_${timestamp}.json`;
+            triggerDownload(JSON.stringify(jsonData, null, 2), jsonFilename);
+
+            alert(`Generated ${allReportsData.length} report(s) successfully!`);
+        }
+
+        function getFormattedTimestamp(){
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hour = String(now.getHours()).padStart(2, '0');
+            const minute = String(now.getMinutes()).padStart(2, '0');
+            const second = String(now.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day}-${hour}-${minute}-${second}`;
+        }
+
+        function generateSinglePlayerReportData(playerId){
             const player = players.find(p=>p.id===playerId);
-            if(!player){ alert('Player not found'); return; }
+            if(!player) return null;
 
             // Find all games for this player
             const playerGames = results.filter(r => r.p1Id === playerId || r.p2Id === playerId);
 
             if(!playerGames.length){
-                alert(`No games found for ${player.name}`);
-                return;
+                return null;
             }
 
             // Calculate statistics
             let wins = 0, losses = 0, draws = 0;
             let gamesDetails = [];
             let totalRatingChange = 0;
+            let gamesList = [];
 
             playerGames.forEach(r => {
                 const isPlayer1 = r.p1Id === playerId;
                 const opponent = isPlayer1 ? players.find(p=>p.id===r.p2Id) : players.find(p=>p.id===r.p1Id);
                 const opponentName = opponent ? opponent.name : 'Unknown';
+                const opponentId = opponent ? opponent.id : null;
 
                 let result = '';
                 let ratingChange = 0;
@@ -1327,9 +1436,19 @@
 
                 const ratingChangeStr = r.applied ? (ratingChange > 0 ? ` (+${ratingChange})` : ` (${ratingChange})`) : '';
                 gamesDetails.push(`  Game #${r.id}: ${result} against ${opponentName}${ratingChangeStr}`);
+
+                // Store game data for JSON
+                gamesList.push({
+                    gameId: r.id,
+                    result: result,
+                    opponentId: opponentId,
+                    opponentName: opponentName,
+                    ratingChange: r.applied ? ratingChange : null,
+                    applied: r.applied
+                });
             });
 
-            // Build report
+            // Build report text
             let report = `PLAYER PERFORMANCE REPORT\n`;
             report += `${'='.repeat(60)}\n\n`;
             report += `Player: ${player.name} (#${player.id})\n`;
@@ -1358,17 +1477,25 @@
             report += `\n\n`;
             report += `Report generated: ${new Date().toLocaleString()}\n`;
 
-            // Download report as text file
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hour = String(now.getHours()).padStart(2, '0');
-            const minute = String(now.getMinutes()).padStart(2, '0');
-            const second = String(now.getSeconds()).padStart(2, '0');
-            const timestamp = `${year}-${month}-${day}-${hour}-${minute}-${second}`;
-            const filename = `player_report_${player.name.replace(/\s+/g, '_')}_${timestamp}.txt`;
-            triggerDownload(report, filename);
+            return {
+                playerId: player.id,
+                playerName: player.name,
+                category: player.category,
+                currentRating: player.rating,
+                totalGames: playerGames.length,
+                wins: wins,
+                losses: losses,
+                draws: draws,
+                winPercentage: parseFloat(winPercentage),
+                totalRatingChange: totalRatingChange,
+                games: gamesList,
+                reportText: report
+            };
+        }
+
+        function generatePlayerReport(playerId){
+            // Legacy function - kept for compatibility, redirects to new system
+            generateMultiPlayerReports([playerId]);
         }
 
         /******************************
