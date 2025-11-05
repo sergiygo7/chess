@@ -639,8 +639,8 @@
             manualPairings.forEach((mp,i)=>{
                 const p1 = mp.p1Id? players.find(p=>p.id===mp.p1Id): null;
                 const p2 = mp.p2Id? players.find(p=>p.id===mp.p2Id): null;
-                const label1 = p1? `${escapeHtml(p1.name)} (${p1.rating})`:'<span class="no-partner">(No partner)</span>';
-                const label2 = p2? `${escapeHtml(p2.name)} (${p2.rating})`:'<span class="no-partner">(No partner)</span>';
+                const label1 = p1? `#${p1.id} - ${escapeHtml(p1.name)} (${p1.rating})`:'<span class="no-partner">(No partner)</span>';
+                const label2 = p2? `#${p2.id} - ${escapeHtml(p2.name)} (${p2.rating})`:'<span class="no-partner">(No partner)</span>';
 
                 // Display table info
                 let tableDisplay;
@@ -660,11 +660,34 @@
                     `</div>`+
                     `<div class="manual-pair-controls" style="display:flex; gap:8px; align-items:center;">`+
                     `<span class="tag manual">MANUAL</span>`+
+                    `<button class="mini" onclick="editManualPair(${i})">Edit</button>`+
                     `<button class="mini danger" onclick="deleteManualPair(${i})">Delete</button>`+
                     `</div>`+
                     `</div></div>`;
             });
             box.innerHTML=html;
+        }
+        function editManualPair(i){
+            const mp = manualPairings[i];
+            if(!mp) return;
+
+            // Populate the form fields with current values
+            const tableInput = document.getElementById('manualTableInput');
+            const sel1 = document.getElementById('manualPlayer1');
+            const sel2 = document.getElementById('manualPlayer2');
+
+            tableInput.value = mp.isAutoTable ? '' : (mp.tableNumber || '');
+            sel1.value = mp.p1Id !== null ? mp.p1Id.toString() : 'NO_PARTNER';
+            sel2.value = mp.p2Id !== null ? mp.p2Id.toString() : 'NO_PARTNER';
+
+            // Delete the old entry
+            manualPairings.splice(i, 1);
+            renderManualPairsList();
+            generatePairings();
+
+            // Scroll to the form and focus the first field
+            tableInput.focus();
+            tableInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         function deleteManualPair(i){ manualPairings.splice(i,1); renderManualPairsList(); generatePairings(); }
         function clearManualPairings(){ if(!manualPairings.length) return; if(!confirm('Clear all manual pairings?')) return; manualPairings = []; renderManualPairsList(); generatePairings(); }
@@ -1336,7 +1359,15 @@
             report += `Report generated: ${new Date().toLocaleString()}\n`;
 
             // Download report as text file
-            const filename = `player_report_${player.name.replace(/\s+/g, '_')}_${Date.now()}.txt`;
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hour = String(now.getHours()).padStart(2, '0');
+            const minute = String(now.getMinutes()).padStart(2, '0');
+            const second = String(now.getSeconds()).padStart(2, '0');
+            const timestamp = `${year}-${month}-${day}-${hour}-${minute}-${second}`;
+            const filename = `player_report_${player.name.replace(/\s+/g, '_')}_${timestamp}.txt`;
             triggerDownload(report, filename);
         }
 
