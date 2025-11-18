@@ -328,6 +328,7 @@
                 <button class="primary" onclick="triggerLoadPlayers()">Load Players (CSV/JSON)</button>
                 <button onclick="openPlayerModal()">Add New Player</button>
                 <button onclick="downloadPlayersCSV()">Download Players as CSV</button>
+                <button onclick="downloadPlayersBasicJSON()">Download Players as JSON</button>
                 <input id="playersFileInput" type="file" accept=".csv,.json" class="hidden" onchange="handlePlayersFile(event)" />
             </div>
             <div id="playersTableWrapper"></div>
@@ -1674,6 +1675,50 @@
         /******************************
          * JSON Export with Statistics and History
          ******************************/
+        function downloadPlayersBasicJSON() {
+            if(!players.length) {
+                alert('No players to export');
+                return;
+            }
+
+            // Generate JSON with current player info (no statistics or history updates)
+            const json = generatePlayersBasicJSON();
+            triggerDownload(json, 'players.json');
+        }
+
+        function generatePlayersBasicJSON() {
+            // Calculate category counts
+            const categoryCounts = {};
+            players.forEach(p => {
+                const cat = p.category || 'Unknown';
+                categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+            });
+
+            // Export players with current info, preserving existing statistics and history
+            const exportData = {
+                metadata: {
+                    version: "1.0",
+                    lastUpdated: new Date().toISOString(),
+                    totalPlayers: players.length,
+                    categories: categoryCounts
+                },
+                players: players.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    category: p.category,
+                    currentRating: p.rating,
+                    initialRating: p.initialRating,
+                    presence: p.presence,
+                    teacher: p.teacher || '',
+                    grade: p.grade || '',
+                    statistics: p.statistics || null,
+                    history: p.history || []
+                }))
+            };
+
+            return JSON.stringify(exportData, null, 2);
+        }
+
         function downloadPlayersJSON() {
             if(!players.length) {
                 alert('No players to export');
