@@ -296,6 +296,92 @@
             }
         }
 
+        /* Searchable combobox */
+        .searchable-select { position:relative; width:100%; }
+        .searchable-select input.ss-input {
+            width:100%; padding:7px 28px 7px 8px; border:1px solid var(--border);
+            border-radius:var(--radius); font-size:.8rem; background:#fff; cursor:text;
+        }
+        .searchable-select .ss-arrow {
+            position:absolute; right:8px; top:50%; transform:translateY(-50%);
+            pointer-events:none; font-size:.6rem; color:#888;
+        }
+        .searchable-select .ss-dropdown {
+            display:none; position:absolute; left:0; right:0; top:100%;
+            max-height:200px; overflow-y:auto; background:#fff;
+            border:1px solid var(--border); border-top:none;
+            border-radius:0 0 var(--radius) var(--radius);
+            box-shadow:0 4px 12px rgba(0,0,0,.12); z-index:300;
+        }
+        .searchable-select.open .ss-dropdown { display:block; }
+        .searchable-select .ss-option {
+            padding:6px 10px; font-size:.8rem; cursor:pointer;
+        }
+        .searchable-select .ss-option:hover,
+        .searchable-select .ss-option.highlighted {
+            background:#e8f0fe;
+        }
+        .searchable-select .ss-option.selected {
+            background:#d4e8d4; font-weight:600;
+        }
+        .searchable-select .ss-no-match {
+            padding:8px 10px; font-size:.75rem; color:#999; font-style:italic;
+        }
+
+        /* ── Dark mode ── */
+        body.dark { --bg:#1a1d23; --text:#d4d4d8; --border:#3a3f47; --muted:#999; --sidebar-bg:#15181d; --sidebar-active:#2563eb; --accent:#388e3c; --danger:#e53935; }
+        body.dark button, body.dark .btn { background:#2a2e36; color:#d4d4d8; border-color:var(--border); }
+        body.dark button:hover { background:#353a44; }
+        body.dark button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+        body.dark button.primary:hover { background:#2e7d32; }
+        body.dark button.danger { background:var(--danger); color:#fff; border-color:var(--danger); }
+        body.dark button.danger:hover { background:#c62828; }
+        body.dark button.outline { background:transparent; color:#d4d4d8; }
+        body.dark table { background:#22262e; }
+        body.dark thead { background:#2a2e36; }
+        body.dark tbody tr:hover { background:#2e333d; }
+        body.dark .modal { background:#22262e; border-color:var(--border); }
+        body.dark .modal header { border-color:var(--border); color:#d4d4d8; }
+        body.dark .modal .actions { border-color:var(--border); }
+        body.dark .modal input[type=text],
+        body.dark .modal input[type=number],
+        body.dark .modal select { background:#2a2e36; color:#d4d4d8; border-color:var(--border); }
+        body.dark .searchable-select input.ss-input { background:#2a2e36; color:#d4d4d8; border-color:var(--border); }
+        body.dark .searchable-select .ss-dropdown { background:#22262e; border-color:var(--border); }
+        body.dark .searchable-select .ss-option:hover,
+        body.dark .searchable-select .ss-option.highlighted { background:#353a44; }
+        body.dark .searchable-select .ss-option.selected { background:#2e4a2e; }
+        body.dark .tag { background:#353a44; color:#a8b3cf; }
+        body.dark .tag.manual { background:#4a3520; color:#f0b060; }
+        body.dark .tag.auto { background:#1e3a1e; color:#6fcf6f; }
+        body.dark .tag.applied { background:#1a3040; color:#60b0e0; }
+        body.dark .no-partner { background:#4a4a20; color:#e0e080; }
+        body.dark .divider { background:#3a3f47; }
+        body.dark .nav-item { background:rgba(255,255,255,0.04); }
+        body.dark .nav-item:not(.disabled):hover { background:#2a2e36; }
+        body.dark .mobile-menu-toggle { background:var(--sidebar-bg); }
+        body.dark .modal-backdrop { background:rgba(0,0,0,.65); }
+        /* Dark mode inline-style overrides */
+        body.dark [style*="background:#f8f9f"],
+        body.dark [style*="background:#fff"] { background:#22262e !important; }
+        body.dark [style*="color:#666"] { color:#aaa !important; }
+        body.dark .stat-label { color:#aaa !important; }
+        body.dark [style*="font-size:1.8rem"] { color:#e0e0e0 !important; }
+        body.dark input[type=text],
+        body.dark input[type=number],
+        body.dark select { background:#2a2e36; color:#d4d4d8; border-color:var(--border); }
+        body.dark h3 { color:#d4d4d8; }
+        body.dark label { color:#d4d4d8; }
+        body.dark canvas { filter:invert(0.88) hue-rotate(180deg); }
+
+        /* Dark mode toggle */
+        .dark-toggle { display:flex; align-items:center; gap:8px; padding:10px 12px; margin-bottom:10px; cursor:pointer; user-select:none; border-radius:var(--radius); background:rgba(255,255,255,0.06); font-size:.8rem; color:#ccc; }
+        .dark-toggle:hover { background:rgba(255,255,255,0.12); }
+        .dark-toggle .toggle-track { width:34px; height:18px; border-radius:9px; background:#555; position:relative; transition:background .2s; flex-shrink:0; }
+        .dark-toggle .toggle-thumb { width:14px; height:14px; border-radius:50%; background:#fff; position:absolute; top:2px; left:2px; transition:left .2s; }
+        body.dark .dark-toggle .toggle-track { background:var(--sidebar-active); }
+        body.dark .dark-toggle .toggle-thumb { left:18px; }
+
         /* Print styles */
         @media print {
             .sidebar, .mobile-menu-toggle, .sidebar-overlay { display:none !important; }
@@ -319,6 +405,10 @@
         <div id="navPairing" class="nav-item disabled" onclick="navigate('pairing')"><span>Pairing</span></div>
         <div id="navResults" class="nav-item disabled" onclick="navigate('results')"><span>Game Result</span></div>
         <div id="navVisualization" class="nav-item disabled" onclick="navigate('visualization')"><span>Visualization</span></div>
+        <div class="dark-toggle" onclick="toggleDarkMode()">
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            <span id="darkLabel">Dark mode</span>
+        </div>
         <div class="version">v0.1 SPA</div>
     </aside>
     <main class="main">
@@ -428,11 +518,14 @@
 
         <div id="sectionVisualization" class="section-view hidden">
             <h2>Visualization</h2>
-            <div class="actions">
-                <label for="visualizationPlayerSelect" style="font-size:.85rem; font-weight:600; margin-right:8px;">Select Player:</label>
-                <select id="visualizationPlayerSelect" onchange="showPlayerVisualization()" style="padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); font-size:.85rem; min-width:250px;">
-                    <option value="">-- Select a player --</option>
-                </select>
+            <div class="actions" style="align-items:center;">
+                <label style="font-size:.85rem; font-weight:600; margin-right:8px;">Select Player:</label>
+                <input type="hidden" id="vizPlayerHidden" value="">
+                <div class="searchable-select" id="ss-viz" style="max-width:350px;">
+                    <input type="text" class="ss-input" id="vizPlayerInput" placeholder="Type name or ID to filter…" value="" autocomplete="off">
+                    <span class="ss-arrow">&#9662;</span>
+                    <div class="ss-dropdown"></div>
+                </div>
             </div>
             <div id="playerStatisticsWrapper" style="margin-top:20px;"></div>
             <div id="ratingChartWrapper" style="margin-top:30px;">
@@ -1141,11 +1234,25 @@
             });
         }
         function resultForm(r={}){
-            const playerOptions = players.map(p=> `<option value="${p.id}" ${r.p1Id===p.id?'selected':''}>#${p.id} - ${escapeHtml(p.name)} (${p.category}, ${p.rating})</option>`).join('');
-            const playerOptions2 = players.map(p=> `<option value="${p.id}" ${r.p2Id===p.id?'selected':''}>#${p.id} - ${escapeHtml(p.name)} (${p.category}, ${p.rating})</option>`).join('');
+            const selP1 = r.p1Id != null ? players.find(p=>p.id===r.p1Id) : null;
+            const selP2 = r.p2Id != null ? players.find(p=>p.id===r.p2Id) : null;
+            const dispP1 = selP1 ? `#${selP1.id} - ${escapeHtml(selP1.name)} (${selP1.category}, ${selP1.rating})` : '';
+            const dispP2 = selP2 ? `#${selP2.id} - ${escapeHtml(selP2.name)} (${selP2.category}, ${selP2.rating})` : '';
             return `<form id="resultForm">`+
-                `<label>Player 1</label><select name="p1">${playerOptions}</select>`+
-                `<label>Player 2</label><select name="p2">${playerOptions2}</select>`+
+                `<input type="hidden" name="p1" value="${r.p1Id!=null?r.p1Id:(players[0]?players[0].id:'')}">`+
+                `<label>Player 1</label>`+
+                `<div class="searchable-select" id="ss-p1">`+
+                    `<input type="text" class="ss-input" placeholder="Type name or ID to filter…" value="${dispP1||( players[0] ? '#'+players[0].id+' - '+escapeHtml(players[0].name)+' ('+players[0].category+', '+players[0].rating+')' : '')}" autocomplete="off">`+
+                    `<span class="ss-arrow">&#9662;</span>`+
+                    `<div class="ss-dropdown"></div>`+
+                `</div>`+
+                `<input type="hidden" name="p2" value="${r.p2Id!=null?r.p2Id:(players[1]?players[1].id:(players[0]?players[0].id:''))}">`+
+                `<label>Player 2</label>`+
+                `<div class="searchable-select" id="ss-p2">`+
+                    `<input type="text" class="ss-input" placeholder="Type name or ID to filter…" value="${dispP2||( players[1] ? '#'+players[1].id+' - '+escapeHtml(players[1].name)+' ('+players[1].category+', '+players[1].rating+')' : (players[0] ? '#'+players[0].id+' - '+escapeHtml(players[0].name)+' ('+players[0].category+', '+players[0].rating+')' : ''))}" autocomplete="off">`+
+                    `<span class="ss-arrow">&#9662;</span>`+
+                    `<div class="ss-dropdown"></div>`+
+                `</div>`+
                 `<label>Outcome</label><select name="outcome">`+
                     `<option value="P1" ${r.outcome==='P1'?'selected':''}>Player 1 wins</option>`+
                     `<option value="P2" ${r.outcome==='P2'?'selected':''}>Player 2 wins</option>`+
@@ -1612,10 +1719,138 @@
             backdrop.querySelector('input,select,textarea');
             backdrop._onConfirm = onConfirm;
             backdrop._onCancel = onCancel;
+            // Initialise any searchable selects inside the modal
+            if(backdrop.querySelector('.searchable-select')) initSearchableSelects();
         }
         function closeModal(btn){ const backdrop=btn.closest('.modal-backdrop'); backdrop.remove(); }
         function cancelModal(btn){ const backdrop=btn.closest('.modal-backdrop'); if(!backdrop) return; if(backdrop._onCancel) { backdrop._onCancel(); } backdrop.remove(); }
         function confirmModal(btn){ const backdrop=btn.closest('.modal-backdrop'); if(!backdrop) return; const ok = backdrop._onConfirm? backdrop._onConfirm(): true; if(ok!==false) backdrop.remove(); }
+
+        /* ── Searchable combobox logic ── */
+        function initSearchableSelects(){
+            document.querySelectorAll('.searchable-select').forEach(wrapper =>{
+                const input   = wrapper.querySelector('.ss-input');
+                const dd      = wrapper.querySelector('.ss-dropdown');
+                const hidName = wrapper.id === 'ss-p1' ? 'p1' : 'p2';
+                const hidden  = wrapper.closest('form').querySelector('input[name="' + hidName + '"]');
+                let highlighted = -1;
+                let isOpen = false;
+
+                // Ensure the input is editable
+                input.removeAttribute('readonly');
+                input.removeAttribute('disabled');
+                input.style.pointerEvents = 'auto';
+                input.style.userSelect = 'text';
+                input.style.webkitUserSelect = 'text';
+
+                function getDisplayForValue(val){
+                    const p = players.find(function(pl){ return String(pl.id)===String(val); });
+                    return p ? '#'+p.id+' - '+p.name+' ('+p.category+', '+p.rating+')' : '';
+                }
+
+                function buildOptions(filter){
+                    const lc = (filter||'').toLowerCase().trim();
+                    let html = '';
+                    let count = 0;
+                    players.forEach(function(p){
+                        const label = '#'+p.id+' - '+escapeHtml(p.name)+' ('+p.category+', '+p.rating+')';
+                        const match = !lc || String(p.id).includes(lc) || p.name.toLowerCase().includes(lc);
+                        if(match){
+                            const sel = String(p.id) === String(hidden.value) ? ' selected' : '';
+                            html += '<div class="ss-option'+sel+'" data-value="'+p.id+'">'+label+'</div>';
+                            count++;
+                        }
+                    });
+                    if(!count) html = '<div class="ss-no-match">No matching players</div>';
+                    dd.innerHTML = html;
+                    highlighted = -1;
+                }
+
+                function openDropdown(){
+                    if(isOpen) return;
+                    isOpen = true;
+                    var filterText = input.value;
+                    if(filterText === getDisplayForValue(hidden.value)) filterText = '';
+                    buildOptions(filterText);
+                    wrapper.classList.add('open');
+                }
+
+                function closeDropdown(){
+                    isOpen = false;
+                    wrapper.classList.remove('open');
+                    highlighted = -1;
+                }
+
+                function selectValue(val){
+                    hidden.value = val;
+                    input.value = getDisplayForValue(val);
+                    closeDropdown();
+                }
+
+                function highlightIdx(idx){
+                    var opts = dd.querySelectorAll('.ss-option');
+                    for(var i=0;i<opts.length;i++) opts[i].classList.remove('highlighted');
+                    if(idx>=0 && idx<opts.length){ opts[idx].classList.add('highlighted'); opts[idx].scrollIntoView({block:'nearest'}); }
+                    highlighted = idx;
+                }
+
+                // Click on the input => clear and open
+                input.addEventListener('click', function(e){
+                    e.stopPropagation();
+                    if(input.value === getDisplayForValue(hidden.value)){
+                        input.value = '';
+                    }
+                    openDropdown();
+                });
+
+                // Typing filters the list
+                input.addEventListener('input', function(){
+                    buildOptions(input.value);
+                    wrapper.classList.add('open');
+                    isOpen = true;
+                });
+
+                // Keyboard navigation
+                input.addEventListener('keydown', function(e){
+                    var opts = dd.querySelectorAll('.ss-option');
+                    if(e.key==='ArrowDown'){ e.preventDefault(); highlightIdx(Math.min(highlighted+1, opts.length-1)); }
+                    else if(e.key==='ArrowUp'){ e.preventDefault(); highlightIdx(Math.max(highlighted-1, 0)); }
+                    else if(e.key==='Enter'){ e.preventDefault(); if(highlighted>=0 && opts[highlighted]) selectValue(opts[highlighted].dataset.value); }
+                    else if(e.key==='Escape'){ e.preventDefault(); input.value = getDisplayForValue(hidden.value); closeDropdown(); }
+                });
+
+                // Clicking a dropdown option
+                dd.addEventListener('mousedown', function(e){
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var opt = e.target.closest('.ss-option');
+                    if(opt) selectValue(opt.dataset.value);
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e){
+                    if(!wrapper.contains(e.target) && isOpen){
+                        input.value = getDisplayForValue(hidden.value);
+                        closeDropdown();
+                    }
+                });
+            });
+        }
+
+        /******************************
+         * Dark Mode
+         ******************************/
+        function toggleDarkMode(){
+            document.body.classList.toggle('dark');
+            const on = document.body.classList.contains('dark');
+            localStorage.setItem('chess-dark-mode', on ? '1' : '0');
+        }
+        // Restore dark mode preference on load (default: ON)
+        (function(){
+            if(localStorage.getItem('chess-dark-mode') !== '0'){
+                document.body.classList.add('dark');
+            }
+        })();
 
         /******************************
          * Mobile Menu Functions
@@ -1985,20 +2220,101 @@
         let currentChart = null;
 
         function populateVisualizationPlayerSelect() {
-            const select = document.getElementById('visualizationPlayerSelect');
-            select.innerHTML = '<option value="">-- Select a player --</option>';
+            // Re-init the viz searchable select whenever players change
+            initVizSearchableSelect();
+        }
 
-            players.forEach(p => {
-                const option = document.createElement('option');
-                option.value = p.id;
-                option.textContent = `#${p.id} - ${p.name} (${p.category})`;
-                select.appendChild(option);
+        function initVizSearchableSelect(){
+            const wrapper = document.getElementById('ss-viz');
+            if(!wrapper) return;
+            const input  = wrapper.querySelector('.ss-input');
+            const dd     = wrapper.querySelector('.ss-dropdown');
+            const hidden = document.getElementById('vizPlayerHidden');
+            let highlighted = -1;
+            let isOpen = false;
+
+            // Remove old listeners by replacing the input element
+            const newInput = input.cloneNode(true);
+            input.parentNode.replaceChild(newInput, input);
+            const inp = newInput;
+
+            function getDisplay(val){
+                const p = players.find(function(pl){ return String(pl.id)===String(val); });
+                return p ? '#'+p.id+' - '+p.name+' ('+p.category+', '+p.rating+')' : '';
+            }
+            function buildOptions(filter){
+                const lc = (filter||'').toLowerCase().trim();
+                let html = '', count = 0;
+                players.forEach(function(p){
+                    const label = '#'+p.id+' - '+escapeHtml(p.name)+' ('+p.category+', '+p.rating+')';
+                    const match = !lc || String(p.id).includes(lc) || p.name.toLowerCase().includes(lc);
+                    if(match){
+                        const sel = String(p.id)===String(hidden.value) ? ' selected' : '';
+                        html += '<div class="ss-option'+sel+'" data-value="'+p.id+'">'+label+'</div>';
+                        count++;
+                    }
+                });
+                if(!count) html = '<div class="ss-no-match">No matching players</div>';
+                dd.innerHTML = html;
+                highlighted = -1;
+            }
+            function openDD(){
+                if(isOpen) return;
+                isOpen = true;
+                var f = inp.value === getDisplay(hidden.value) ? '' : inp.value;
+                buildOptions(f);
+                wrapper.classList.add('open');
+            }
+            function closeDD(){
+                isOpen = false;
+                wrapper.classList.remove('open');
+                highlighted = -1;
+            }
+            function selectVal(val){
+                hidden.value = val;
+                inp.value = getDisplay(val);
+                closeDD();
+                showPlayerVisualization();
+            }
+            function highlightIdx(idx){
+                var opts = dd.querySelectorAll('.ss-option');
+                for(var i=0;i<opts.length;i++) opts[i].classList.remove('highlighted');
+                if(idx>=0 && idx<opts.length){ opts[idx].classList.add('highlighted'); opts[idx].scrollIntoView({block:'nearest'}); }
+                highlighted = idx;
+            }
+
+            inp.addEventListener('click', function(e){
+                e.stopPropagation();
+                if(inp.value === getDisplay(hidden.value)) inp.value = '';
+                openDD();
             });
+            inp.addEventListener('input', function(){ buildOptions(inp.value); wrapper.classList.add('open'); isOpen=true; });
+            inp.addEventListener('keydown', function(e){
+                var opts = dd.querySelectorAll('.ss-option');
+                if(e.key==='ArrowDown'){ e.preventDefault(); highlightIdx(Math.min(highlighted+1, opts.length-1)); }
+                else if(e.key==='ArrowUp'){ e.preventDefault(); highlightIdx(Math.max(highlighted-1, 0)); }
+                else if(e.key==='Enter'){ e.preventDefault(); if(highlighted>=0 && opts[highlighted]) selectVal(opts[highlighted].dataset.value); }
+                else if(e.key==='Escape'){ e.preventDefault(); inp.value = getDisplay(hidden.value); closeDD(); }
+            });
+            dd.addEventListener('mousedown', function(e){
+                e.preventDefault(); e.stopPropagation();
+                var opt = e.target.closest('.ss-option');
+                if(opt) selectVal(opt.dataset.value);
+            });
+            document.addEventListener('click', function handler(e){
+                if(!wrapper.contains(e.target) && isOpen){
+                    inp.value = getDisplay(hidden.value);
+                    closeDD();
+                }
+            });
+
+            // Reset display
+            hidden.value = '';
+            inp.value = '';
         }
 
         function showPlayerVisualization() {
-            const select = document.getElementById('visualizationPlayerSelect');
-            const playerId = parseInt(select.value);
+            const playerId = parseInt(document.getElementById('vizPlayerHidden').value);
 
             if(!playerId) {
                 document.getElementById('playerStatisticsWrapper').innerHTML = '';
